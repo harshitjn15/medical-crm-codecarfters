@@ -31,8 +31,8 @@ export default function Login() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        username: 'demo',
-        password: 'demo123'
+        username: 'apollo_name',
+        password: '123456'
       })
     });
 
