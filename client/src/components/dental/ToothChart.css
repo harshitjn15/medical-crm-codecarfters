@@ -1,0 +1,108 @@
+.tooth-chart { font-family: var(--font); }
+.tc-msg { background: var(--success-bg); color: var(--success); padding: 6px 12px; border-radius: 6px; font-size: 13px; margin-bottom: 12px; }
+
+/* Legend */
+.tc-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 16px; }
+.tc-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+.tc-legend-dot { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+
+/* Jaw labels */
+.tc-jaw-label { text-align: center; font-size: 12px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.5px; text-transform: uppercase; margin: 6px 0; }
+
+/* Tooth row */
+.tc-row { display: flex; gap: 3px; justify-content: center; padding: 4px 0; }
+
+/* Individual tooth */
+.tc-tooth {
+  position: relative;
+  border: 2px solid #94a3b8;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s, box-shadow 0.1s;
+  user-select: none;
+}
+.tc-tooth:hover { transform: translateY(-2px); box-shadow: 0 3px 8px rgba(0,0,0,0.15); }
+.tc-tooth.tc-selected { outline: 3px solid var(--primary); outline-offset: 1px; }
+
+/* Tooth sizes by type */
+.tc-molar    { width: 32px; height: 36px; }
+.tc-premolar { width: 26px; height: 34px; }
+.tc-canine   { width: 22px; height: 38px; }
+.tc-incisor  { width: 20px; height: 36px; }
+
+.tc-num { font-size: 9px; font-weight: 700; color: #334155; line-height: 1; }
+.tc-x   { font-size: 14px; color: #94a3b8; position: absolute; }
+.tc-dot { width: 7px; height: 7px; border-radius: 50%; position: absolute; bottom: 4px; }
+.tc-empty { opacity: 0.4; }
+
+/* Midline separator */
+.tc-midline { display: flex; align-items: center; gap: 10px; margin: 4px 0; padding: 0 8px; }
+.tc-midline span { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.tc-midline-rule { flex: 1; height: 1px; background: var(--border); }
+
+/* Edit panel */
+.tc-edit-panel {
+  margin-top: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+}
+.tc-edit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.tc-edit-body { padding: 16px; }
+
+/* Status grid */
+.tc-status-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px; }
+.tc-status-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-card);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.12s, background 0.12s;
+  font-family: var(--font);
+  color: var(--text-primary);
+}
+.tc-status-btn:hover { border-color: var(--primary-light); background: var(--bg-main); }
+.tc-status-btn.tc-status-active { border-color: var(--primary); background: #eff6ff; font-weight: 600; }
+.tc-status-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+
+/* Surfaces */
+.tc-surfaces { display: flex; flex-wrap: wrap; gap: 6px; }
+.tc-surface-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--bg-card);
+  font-size: 12px;
+  cursor: pointer;
+  font-family: var(--font);
+  color: var(--text-secondary);
+  transition: all 0.12s;
+}
+.tc-surface-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+/* Summary */
+.tc-summary { margin-top: 20px; background: var(--bg-main); border-radius: var(--radius-sm); padding: 14px 16px; }
+.tc-summary-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 10px; }
+.tc-summary-grid { display: flex; flex-direction: column; gap: 6px; }
+.tc-summary-item { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.tc-summary-num { font-weight: 700; min-width: 32px; color: var(--text-secondary); }
+.tc-summary-status { font-weight: 600; min-width: 130px; }
+.tc-summary-note { color: var(--text-muted); font-size: 12px; }

@@ -1,0 +1,228 @@
+/* ── Page wrapper ────────────────────────────────────────────────────── */
+.ip-page {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+  font-family: 'DM Sans', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  color: #1a1f2e;
+}
+
+/* ── Toolbar (screen only) ───────────────────────────────────────────── */
+.ip-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+/* ── Document card ───────────────────────────────────────────────────── */
+.ip-doc {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 48px 52px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+}
+
+/* ── Header row ──────────────────────────────────────────────────────── */
+.ip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 32px;
+  margin-bottom: 28px;
+}
+
+/* Clinic block */
+.ip-clinic { flex: 1; }
+.ip-logo { max-width: 110px; max-height: 50px; object-fit: contain; display: block; margin-bottom: 10px; }
+.ip-clinic-name { font-size: 20px; font-weight: 700; color: #0f4c75; margin-bottom: 3px; }
+.ip-clinic-tag  { font-size: 13px; color: #64748b; font-style: italic; margin-bottom: 6px; }
+.ip-clinic-line { font-size: 13px; color: #475569; margin-bottom: 2px; }
+.ip-clinic-contact { font-size: 13px; color: #475569; margin-top: 2px; }
+.ip-dot { margin: 0 6px; color: #cbd5e1; }
+.ip-clinic-gst { font-size: 12px; font-weight: 600; color: #334155; margin-top: 6px; letter-spacing: 0.3px; }
+
+/* Meta block */
+.ip-meta { text-align: right; min-width: 210px; }
+.ip-title-word {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 5px;
+  color: #0f4c75;
+  margin-bottom: 4px;
+}
+.ip-number {
+  font-family: 'Courier New', monospace;
+  font-size: 15px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 12px;
+}
+.ip-meta-tbl { margin-left: auto; border-collapse: collapse; font-size: 13px; }
+.ip-meta-tbl td { padding: 3px 6px; vertical-align: top; }
+.ip-meta-tbl td:first-child { color: #94a3b8; text-align: right; padding-right: 10px; white-space: nowrap; }
+.ip-meta-tbl td:last-child { font-weight: 500; color: #1e293b; }
+
+.ip-status-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* ── Divider ─────────────────────────────────────────────────────────── */
+.ip-rule {
+  border: none;
+  border-top: 2px solid #e2e8f0;
+  margin: 0 0 24px;
+}
+
+/* ── Section label ───────────────────────────────────────────────────── */
+.ip-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+/* ── Bill To ─────────────────────────────────────────────────────────── */
+.ip-bill-section { margin-bottom: 28px; }
+.ip-patient-name { font-size: 17px; font-weight: 600; color: #0f172a; margin-bottom: 5px; }
+.ip-patient-line { font-size: 13px; color: #475569; margin-bottom: 3px; }
+
+/* ── Items table ─────────────────────────────────────────────────────── */
+.ip-items {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0;
+}
+
+.ip-items thead tr {
+  background: #0f4c75;
+  color: #fff;
+}
+.ip-items thead th {
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-align: left;
+}
+.ip-items tbody tr { border-bottom: 1px solid #f1f5f9; }
+.ip-items tbody tr:last-child { border-bottom: 2px solid #e2e8f0; }
+.ip-items tbody tr:nth-child(even) td { background: #f8fafc; }
+.ip-items tbody td { padding: 10px 12px; font-size: 13px; vertical-align: middle; }
+
+/* Column widths */
+.ip-col-no    { width: 4%;  }
+.ip-col-desc  { width: 36%; }
+.ip-col-cat   { width: 16%; }
+.ip-col-qty   { width: 8%;  }
+.ip-col-price { width: 16%; }
+.ip-col-amt   { width: 16%; text-align: right; }
+
+.ip-item-desc { font-weight: 500; }
+.ip-muted     { color: #94a3b8; }
+.ip-cap       { text-transform: capitalize; font-size: 12px; }
+.ip-bold      { font-weight: 600; }
+
+/* ── Totals ──────────────────────────────────────────────────────────── */
+.ip-totals-wrap {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 28px;
+}
+.ip-totals {
+  border-collapse: collapse;
+  min-width: 260px;
+}
+.ip-totals td {
+  padding: 7px 12px;
+  font-size: 13px;
+  color: #334155;
+}
+.ip-totals td:last-child { text-align: right; font-weight: 500; }
+.ip-totals tr { border-top: 1px solid #f1f5f9; }
+
+.ip-discount td { color: #b91c1c; }
+
+.ip-total-row td {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  background: #eff6ff;
+  border-top: 2px solid #bfdbfe;
+  padding: 10px 12px;
+}
+
+/* ── Notes ───────────────────────────────────────────────────────────── */
+.ip-notes {
+  background: #f8fafc;
+  border-left: 3px solid #0f4c75;
+  padding: 12px 16px;
+  border-radius: 0 6px 6px 0;
+  margin-bottom: 28px;
+}
+.ip-notes p { font-size: 13px; color: #475569; line-height: 1.7; margin: 0; }
+
+/* ── Footer ──────────────────────────────────────────────────────────── */
+.ip-footer {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 12px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 16px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PRINT STYLES
+   Everything below applies only when printing / saving as PDF
+   ═══════════════════════════════════════════════════════════════════════ */
+@media print {
+  /* Hide toolbar */
+  .no-print { display: none !important; }
+
+  /* Reset page */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  body { background: #fff !important; margin: 0; }
+
+  /* Remove screen chrome */
+  .ip-page {
+    padding: 0;
+    max-width: 100%;
+  }
+
+  /* Remove card shadow/border for clean paper look */
+  .ip-doc {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 32px 40px;
+    min-height: 100vh;
+  }
+
+  /* Force page break before footer if needed */
+  .ip-footer { margin-top: auto; }
+
+  /* Keep table header colors on print */
+  .ip-items thead tr { background: #0f4c75 !important; }
+  .ip-items thead th { color: #fff !important; }
+
+  /* Keep total row highlight */
+  .ip-total-row td { background: #eff6ff !important; }
+
+  /* Keep alternating row shading */
+  .ip-items tbody tr:nth-child(even) td { background: #f8fafc !important; }
+
+  /* Prevent rows from splitting across pages */
+  .ip-items tbody tr { page-break-inside: avoid; }
+
+  /* Ensure totals don't split */
+  .ip-totals-wrap { page-break-inside: avoid; }
+}

@@ -1,0 +1,52 @@
+.vitals-panel { font-family: var(--font); }
+
+.vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.vitals-card-input {
+  background: var(--bg-main);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.vi-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
+.vi-unit  { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+.vitals-record {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  background: var(--bg-card);
+}
+.vitals-latest { border-left: 4px solid var(--primary); }
+
+.vr-date {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+.vitals-readings { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.vr-chip {
+  background: var(--bg-main);
+  border-radius: 8px;
+  padding: 8px 12px;
+  text-align: center;
+  min-width: 70px;
+  border: 1px solid var(--border);
+}
+.vr-chip.vr-success { background: var(--success-bg); border-color: #86efac; }
+.vr-chip.vr-warning { background: var(--warning-bg); border-color: #fcd34d; }
+.vr-chip.vr-danger  { background: var(--danger-bg);  border-color: #fca5a5; }
+
+.vr-chip-label { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+.vr-chip-val   { font-size: 18px; font-weight: 700; line-height: 1.2; color: var(--text-primary); }
+.vr-chip-unit  { font-size: 10px; color: var(--text-muted); }
+
+.vr-notes { margin-top: 10px; font-size: 13px; color: var(--text-secondary); font-style: italic; padding-top: 8px; border-top: 1px solid var(--border); }
