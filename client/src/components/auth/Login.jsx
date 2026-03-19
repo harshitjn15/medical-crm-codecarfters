@@ -46,7 +46,6 @@ export default function Login() {
             <div className="form-group"><label>Password</label><input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" /></div>
             <button type="submit" className="btn btn-primary login-btn" disabled={loading}>{loading ? 'Signing in…' : 'Sign in →'}</button>
           </form>
-          <div className="login-hint">Default: <code>admin</code> / <code>admin123</code></div>
           <a href="/" className="back-link">← Back to public site</a>
         </div>
       </div>
