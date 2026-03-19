@@ -22,6 +22,39 @@ export default function Login() {
     finally { setLoading(false); }
   };
 
+  const handleDemoLogin = async () => {
+  setError('');
+  setLoading(true);
+
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: 'demo_admin',
+        password: 'demo123'
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      return setError('Demo login failed');
+    }
+
+    // ✅ IMPORTANT: store role also
+    localStorage.setItem('role', data.user?.role || 'DEMO');
+
+    login(data.token, data.user);
+    navigate('/admin/dashboard');
+
+  } catch {
+    setError('Demo login failed');
+  } finally {
+    setLoading(false);
+  }
+};
+
   return (
     <div className="login-page">
       <div className="login-left">
@@ -46,6 +79,14 @@ export default function Login() {
             <div className="form-group"><label>Password</label><input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" /></div>
             <button type="submit" className="btn btn-primary login-btn" disabled={loading}>{loading ? 'Signing in…' : 'Sign in →'}</button>
           </form>
+          <button
+  type="button"
+  onClick={handleDemoLogin}
+  className="btn btn-secondary login-btn"
+  style={{ marginTop: '10px' }}
+>
+  🚀 Try Demo (No Signup)
+</button>
           <a href="/" className="back-link">← Back to public site</a>
         </div>
       </div>
