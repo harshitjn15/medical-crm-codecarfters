@@ -1,17 +1,17 @@
 {
   "name": "medical-crm-server",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "start": "NODE_ENV=production node index.js",
+    "dev":   "nodemon index.js"
   },
   "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.1",
-    "express": "^4.18.2",
+    "bcryptjs":  "^2.4.3",
+    "cors":      "^2.8.5",
+    "dotenv":    "^16.4.1",
+    "express":   "^4.18.2",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.2.1"
+    "mongoose":  "^8.2.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.3"

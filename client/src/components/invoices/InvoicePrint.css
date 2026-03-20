@@ -226,3 +226,43 @@
   /* Ensure totals don't split */
   .ip-totals-wrap { page-break-inside: avoid; }
 }
+
+/* ── Layout: Modern ── */
+[data-layout="modern"] .ip-doc { padding: 0; }
+[data-layout="modern"] .ip-header {
+  background: var(--tmpl-color, #0f4c75);
+  padding: 28px 40px 24px;
+  border-radius: 12px 12px 0 0;
+  color: #fff;
+}
+[data-layout="modern"] .ip-clinic-name { color: #fff; font-size: 22px; }
+[data-layout="modern"] .ip-clinic-tag  { color: rgba(255,255,255,0.8); }
+[data-layout="modern"] .ip-clinic-line,
+[data-layout="modern"] .ip-clinic-contact,
+[data-layout="modern"] .ip-clinic-gst  { color: rgba(255,255,255,0.75); }
+[data-layout="modern"] .ip-title-word  { color: #fff; }
+[data-layout="modern"] .ip-number      { color: rgba(255,255,255,0.9); }
+[data-layout="modern"] .ip-meta-tbl td:first-child { color: rgba(255,255,255,0.65); }
+[data-layout="modern"] .ip-meta-tbl td:last-child  { color: #fff; }
+[data-layout="modern"] .ip-bill-section,
+[data-layout="modern"] .ip-items,
+[data-layout="modern"] .ip-totals-wrap,
+[data-layout="modern"] .ip-notes,
+[data-layout="modern"] .ip-footer { padding-left: 40px; padding-right: 40px; }
+[data-layout="modern"] .ip-bill-section { margin-top: 24px; }
+[data-layout="modern"] .ip-rule { margin: 0 40px; }
+
+/* ── Layout: Minimal ── */
+[data-layout="minimal"] .ip-doc { border: none; box-shadow: none; }
+[data-layout="minimal"] .ip-clinic-name { color: #000; }
+[data-layout="minimal"] .ip-title-word  { color: #000; letter-spacing: 4px; }
+[data-layout="minimal"] .ip-items thead tr { background: #000 !important; }
+[data-layout="minimal"] .ip-items thead tr { background: #000 !important; }
+[data-layout="minimal"] .ip-items tbody tr:nth-child(even) td { background: #f5f5f5 !important; }
+[data-layout="minimal"] .ip-status-pill { border: 1px solid #999 !important; background: #f5f5f5 !important; color: #333 !important; }
+[data-layout="minimal"] .ip-total-row td { background: #f0f0f0 !important; }
+
+@media print {
+  [data-layout="modern"] .ip-header { background: var(--tmpl-color, #0f4c75) !important; -webkit-print-color-adjust: exact !important; }
+  [data-layout="minimal"] .ip-items thead tr { background: #000 !important; }
+}

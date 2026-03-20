@@ -41,6 +41,7 @@ const UserSchema = new mongoose.Schema({
   password:  { type: String, required: true },
   email:     String,
   role:      { type: String, enum: ['super_admin', 'admin', 'staff'], default: 'admin' },
+  phone:     String,
 }, { timestamps: true });
 
 // ── Patient ───────────────────────────────────────────────────────────────
@@ -261,6 +262,47 @@ const DentalChartSchema = new mongoose.Schema({
 
 DentalChartSchema.index({ clinicId: 1, patientId: 1 }, { unique: true });
 
+
+// ── PatientFile ───────────────────────────────────────────────────────
+const PatientFileSchema = new mongoose.Schema({
+  clinicId:    { type: mongoose.Schema.Types.ObjectId, ref: 'Clinic', required: true },
+  patientId:   { type: mongoose.Schema.Types.ObjectId, ref: 'Patient', required: true },
+  filename:    { type: String, required: true },
+  originalName:{ type: String, required: true },
+  mimetype:    { type: String, required: true },
+  size:        { type: Number, required: true },
+  data:        { type: String, required: true }, // base64
+  category:    { type: String, enum: ['lab_report','xray','scan','prescription','insurance','other'], default: 'other' },
+  notes:       String,
+}, { timestamps: true });
+PatientFileSchema.index({ clinicId: 1, patientId: 1 });
+
+// ── OtpCode ───────────────────────────────────────────────────────────
+const OtpCodeSchema = new mongoose.Schema({
+  phone:     { type: String, required: true },
+  clinicId:  { type: mongoose.Schema.Types.ObjectId, ref: 'Clinic' },
+  code:      { type: String, required: true },
+  expiresAt: { type: Date, required: true },
+  used:      { type: Boolean, default: false },
+}, { timestamps: true });
+OtpCodeSchema.index({ phone: 1, expiresAt: 1 });
+
+// ── InvoiceTemplate ───────────────────────────────────────────────────
+const InvoiceTemplateSchema = new mongoose.Schema({
+  clinicId:       { type: mongoose.Schema.Types.ObjectId, ref: 'Clinic', required: true, unique: true },
+  layout:         { type: String, enum: ['classic','modern','minimal'], default: 'classic' },
+  logoData:       String, // base64 image
+  logoName:       String,
+  primaryColor:   { type: String, default: '#0f4c75' },
+  headerNote:     String, // e.g. "Reg No: MH/1234" or custom header text
+  footerNote:     String, // e.g. "Payment due within 30 days"
+  showGst:        { type: Boolean, default: true },
+  showDoctorName: { type: Boolean, default: true },
+  doctorName:     String,
+  doctorDegree:   String, // e.g. "BDS, MDS"
+  regNumber:      String,
+}, { timestamps: true });
+
 module.exports = {
   Clinic:        mongoose.model('Clinic',        ClinicSchema),
   User:          mongoose.model('User',          UserSchema),
@@ -270,7 +312,10 @@ module.exports = {
   Followup:      mongoose.model('Followup',      FollowupSchema),
   Invoice:       mongoose.model('Invoice',       InvoiceSchema),
   ClinicWebsite: mongoose.model('ClinicWebsite', ClinicWebsiteSchema),
-  WhatsappLog:   mongoose.model('WhatsappLog',   WhatsappLogSchema),
+  WhatsappLog:     mongoose.model('WhatsappLog',     WhatsappLogSchema),
+  PatientFile:     mongoose.model('PatientFile',     PatientFileSchema),
+  OtpCode:         mongoose.model('OtpCode',         OtpCodeSchema),
+  InvoiceTemplate: mongoose.model('InvoiceTemplate', InvoiceTemplateSchema),
   VitalSigns:    mongoose.model('VitalSigns',    VitalSignsSchema),
   ClinicalNote:  mongoose.model('ClinicalNote',  ClinicalNoteSchema),
   TreatmentPlan: mongoose.model('TreatmentPlan', TreatmentPlanSchema),

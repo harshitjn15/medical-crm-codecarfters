@@ -1,12 +1,14 @@
 {
   "name": "medical-crm",
-  "version": "1.0.0",
-  "description": "Multi-tenant Medical CRM",
+  "version": "3.0.0",
+  "description": "Multi-specialty Medical CRM",
   "scripts": {
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "server": "cd server && npm run dev",
-    "client": "cd client && npm start",
-    "install-all": "npm install && cd server && npm install && cd ../client && npm install"
+    "dev":         "concurrently \"npm run server\" \"npm run client\"",
+    "server":      "cd server && npm run dev",
+    "client":      "cd client && npm start",
+    "install-all": "npm install && cd server && npm install && cd ../client && npm install",
+    "build":       "cd client && npm install && npm run build",
+    "start":       "cd server && npm start"
   },
   "devDependencies": {
     "concurrently": "^8.2.0"

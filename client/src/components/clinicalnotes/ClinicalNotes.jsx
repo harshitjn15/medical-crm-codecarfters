@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
+import SymptomChips from './SymptomChips';
 
 export default function ClinicalNotes({ patientId }) {
   const { authFetch } = useContext(AuthContext);

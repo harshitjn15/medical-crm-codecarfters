@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import ClinicWebsiteEditor from './ClinicWebsiteEditor';
 import WhatsAppSettings from './WhatsAppSettings';
+import InvoiceTemplateEditor from '../invoices/InvoiceTemplateEditor';
 
 const SPECIALTIES = [
   { value:'general',       label:'General / Family Medicine' },
@@ -135,6 +136,7 @@ export default function ClinicSettings() {
       {tab==='website' && <ClinicWebsiteEditor />}
       {tab==='staff'   && <AddStaffCard authFetch={authFetch} />}
       {tab==='whatsapp' && <WhatsAppSettings />}
+      {tab==='invoice_template' && <InvoiceTemplateEditor />}
     </div>
   );
 }

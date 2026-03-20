@@ -10,10 +10,17 @@ export default function InvoicePrint() {
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const [template, setTemplate] = useState({ layout:'classic', primaryColor:'#0f4c75', showGst:true, showDoctorName:true });
+
   useEffect(() => {
-    authFetch(`/api/invoices/${id}/print`)
-      .then(r => r.json())
-      .then(d => { setInvoice(d); setLoading(false); });
+    Promise.all([
+      authFetch(`/api/invoices/${id}/print`).then(r => r.json()),
+      authFetch('/api/invoicetemplate').then(r => r.json()),
+    ]).then(([inv, tmpl]) => {
+      setInvoice(inv);
+      if (tmpl) setTemplate(tmpl);
+      setLoading(false);
+    });
   }, [id]);
 
   if (loading) return <div className="loading"><div className="spinner"></div></div>;
@@ -58,12 +65,12 @@ export default function InvoicePrint() {
       </div>
 
       {/* ── Invoice document ── */}
-      <div className="ip-doc">
+      <div className="ip-doc" data-layout={template.layout} style={{ "--tmpl-color": template.primaryColor || "#0f4c75" }}>
 
         {/* Header: clinic left, invoice meta right */}
         <div className="ip-header">
           <div className="ip-clinic">
-            {clinicLogo && <img src={clinicLogo} alt="logo" className="ip-logo" />}
+            {(template.logoData || clinicLogo) && <img src={template.logoData ? `data:image/png;base64,${template.logoData}` : clinicLogo} alt="logo" className="ip-logo" />}
             <div className="ip-clinic-name">{clinicName}</div>
             {clinicTagline && <div className="ip-clinic-tag">{clinicTagline}</div>}
             {clinicAddress && <div className="ip-clinic-line">{clinicAddress}</div>}
@@ -72,7 +79,9 @@ export default function InvoicePrint() {
               {clinicPhone && clinicEmail && <span className="ip-dot">·</span>}
               {clinicEmail && <span>{clinicEmail}</span>}
             </div>
-            {clinicGst && <div className="ip-clinic-gst">GSTIN: {clinicGst}</div>}
+            {clinicGst && template.showGst && <div className="ip-clinic-gst">GSTIN: {clinicGst}</div>}
+          {template.showDoctorName && template.doctorName && <div className="ip-clinic-gst" style={{ marginTop:4 }}>{template.doctorName}{template.doctorDegree ? `, ${template.doctorDegree}` : ''}{template.regNumber ? ` | Reg: ${template.regNumber}` : ''}</div>}
+          {template.headerNote && <div style={{ fontSize:12, color:'#475569', marginTop:4 }}>{template.headerNote}</div>}
           </div>
 
           <div className="ip-meta">
@@ -175,7 +184,7 @@ export default function InvoicePrint() {
 
         {/* Footer */}
         <div className="ip-footer">
-          Thank you for choosing {clinicName}. Please retain this invoice for your records.
+          {template.footerNote || `Thank you for choosing ${clinicName}. Please retain this invoice for your records.`}
         </div>
 
       </div>

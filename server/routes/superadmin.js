@@ -64,13 +64,13 @@ router.get('/clinics/:id', async (req, res) => {
 
 router.post('/clinics', async (req, res) => {
   try {
-    const { name, slug, address, phone, email, tagline, gstNumber, currency = 'INR', plan = 'basic', admin_username, admin_password, admin_email } = req.body;
+    const { name, slug, address, phone, email, tagline, gstNumber, currency = 'INR', plan = 'basic', admin_username, admin_password, admin_email, admin_phone } = req.body;
     if (!name || !slug || !admin_username || !admin_password) return res.status(400).json({ error: 'name, slug, admin_username, admin_password required' });
     if (await Clinic.findOne({ slug })) return res.status(409).json({ error: 'Slug already taken' });
     if (await User.findOne({ username: admin_username })) return res.status(409).json({ error: 'Username already taken' });
 
     const clinic = await Clinic.create({ name, slug, address, phone, email, tagline, gstNumber, currency, plan });
-    await User.create({ clinicId: clinic._id, username: admin_username, password: bcrypt.hashSync(admin_password, 10), email: admin_email, role: 'admin' });
+    await User.create({ clinicId: clinic._id, username: admin_username, password: bcrypt.hashSync(admin_password, 10), email: admin_email, phone: admin_phone, role: 'admin' });
     await ClinicWebsite.create({ clinicId: clinic._id, heroTitle: name, heroSubtitle: tagline || 'Quality healthcare', services: ['General Consultation','Follow-up Visits','Prescription Management','Health Check-ups'] });
 
     res.status(201).json({ message: 'Clinic onboarded', clinic_id: clinic.id, slug, booking_url: `/book?clinic=${slug}` });

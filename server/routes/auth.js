@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User, Clinic } = require('../models');
+const { User, Clinic, OtpCode } = require('../models');
 const { verifyToken } = require('../middleware/auth');
 const { resolveTenant } = require('../middleware/tenantMiddleware');
 
@@ -49,5 +49,64 @@ router.post('/register', verifyToken, resolveTenant, async (req, res) => {
 });
 
 router.get('/me', verifyToken, resolveTenant, (req, res) => res.json({ user: req.user, clinic: req.clinic }));
+
+
+// ── OTP Login ──────────────────────────────────────────────────────────────
+
+// Generate and "send" OTP — returns a WhatsApp link the frontend opens
+router.post('/otp/generate', async (req, res) => {
+  try {
+    const { phone } = req.body;
+    if (!phone) return res.status(400).json({ error: 'Phone number required' });
+
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < 10) return res.status(400).json({ error: 'Invalid phone number' });
+
+    // Find user by phone
+    const user = await User.findOne({ phone: { $regex: digits.slice(-10) } });
+    if (!user) return res.status(404).json({ error: 'No account found with this phone number' });
+
+    // Invalidate previous OTPs
+    await OtpCode.updateMany({ phone: digits, used: false }, { $set: { used: true } });
+
+    // Generate 6-digit OTP
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    await OtpCode.create({ phone: digits, clinicId: user.clinicId, code, expiresAt });
+
+    // Build WhatsApp link for delivery
+    const cleaned = digits.length === 10 ? `91${digits}` : digits;
+    const message = `Your Medical CRM login OTP is: *${code}*\n\nValid for 10 minutes. Do not share with anyone.`;
+    const waLink = `https://wa.me/${cleaned}?text=${encodeURIComponent(message)}`;
+
+    res.json({ message: 'OTP generated', waLink, phone: digits, expiresIn: 600 });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
+});
+
+// Verify OTP and return token
+router.post('/otp/verify', async (req, res) => {
+  try {
+    const { phone, code } = req.body;
+    if (!phone || !code) return res.status(400).json({ error: 'Phone and OTP required' });
+
+    const digits = phone.replace(/\D/g, '');
+    const otp = await OtpCode.findOne({ phone: digits, code, used: false, expiresAt: { $gt: new Date() } });
+    if (!otp) return res.status(401).json({ error: 'Invalid or expired OTP' });
+
+    // Mark used
+    otp.used = true;
+    await otp.save();
+
+    const user = await User.findOne({ phone: { $regex: digits.slice(-10) } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const clinic = await Clinic.findById(user.clinicId);
+    if (!clinic || clinic.isActive === false) return res.status(403).json({ error: 'Clinic inactive' });
+
+    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, process.env.JWT_SECRET || 'default-secret', { expiresIn: '7d' });
+    res.json({ token, user: { id: user.id, username: user.username, email: user.email, role: user.role, clinic_id: clinic.id, clinic_name: clinic.name, clinic_slug: clinic.slug, specialty: clinic.specialty || 'general' } });
+  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+});
 
 module.exports = router;

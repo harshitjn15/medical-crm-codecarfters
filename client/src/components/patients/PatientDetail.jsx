@@ -6,6 +6,7 @@ import VitalsPanel from '../vitals/VitalsPanel';
 import ClinicalNotes from '../clinicalnotes/ClinicalNotes';
 import TreatmentPlanPanel from '../treatmentplans/TreatmentPlanPanel';
 import ToothChart from '../dental/ToothChart';
+import FileAttachments from '../files/FileAttachments';
 
 export default function PatientDetail() {
   const { authFetch, user } = useContext(AuthContext);
@@ -49,6 +50,7 @@ export default function PatientDetail() {
     ...(isDental ? [{ id: 'dental', label: '🦷 Dental Chart' }] : []),
     { id: 'prescriptions',label: `💊 Prescriptions (${prescriptions.length})` },
     { id: 'invoices',     label: `💰 Invoices (${invoices.length})` },
+    { id: 'files',        label: '📎 Files & Reports' },
   ];
 
   const tabStyle = (active) => ({
@@ -153,6 +155,8 @@ export default function PatientDetail() {
           </div>
         </div>
       )}
+
+      {tab === 'files' && <div className="card"><div className="card-body"><FileAttachments patientId={id} /></div></div>}
 
       {showEdit && <PatientModal patient={patient} onClose={()=>setShowEdit(false)} onSaved={()=>{ setShowEdit(false); load(); }} />}
     </div>
