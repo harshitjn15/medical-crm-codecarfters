@@ -6,18 +6,12 @@ const connectDB = require('./database/connect');
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
-const isProd = process.env.NODE_ENV === 'production';
 
 connectDB();
 
 // CORS — in production the client is served from the same origin so no CORS needed
 // In dev allow localhost:3000
-app.use(cors({
-  origin: isProd
-    ? false                                          // same-origin, no CORS header needed
-    : ['http://localhost:3000', 'https://medical-crm-codecrafters.netlify.app'],
-  credentials: true,
-}));
+app.use(cors({ origin: ['http://localhost:3000','https://medical-crm-codecrafters.netlify.app'], credentials: true }));
 
 app.use(express.json());
 
@@ -59,6 +53,6 @@ if (isProd) {
 }
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
+  console.log(`Server: http://localhost:${PORT}`);
   if (!isProd) console.log('Login: admin / admin123');
 });
