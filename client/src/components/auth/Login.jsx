@@ -55,6 +55,30 @@ export default function Login() {
     navigate('/admin/dashboard');
   };
 
+  const handleDemoLogin = async () => {
+  const demoCredentials = {
+    username: "apollo_name",
+    password: "123456"
+  };
+
+  setPwForm(demoCredentials);
+  setPwLoading(true);
+
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(demoCredentials)
+  });
+
+  const data = await res.json();
+  setPwLoading(false);
+
+  if (!res.ok) return setPwErr(data.error || 'Demo login failed');
+
+  login(data.token, data.user);
+  navigate('/admin/dashboard');
+};
+
   return (
     <div className="login-page">
       <div className="login-left">
@@ -108,6 +132,14 @@ export default function Login() {
               <button className="btn btn-primary login-btn" type="submit" disabled={pwLoading}>
                 {pwLoading ? 'Signing in…' : 'Sign In'}
               </button>
+              <button
+  type="button"
+  className="btn btn-outline login-btn"
+  style={{ marginTop: "10px" }}
+  onClick={handleDemoLogin}
+>
+  🚀 Try Demo (No Signup Required)
+</button>
             </form>
           )}
 
