@@ -39,7 +39,6 @@ app.use('/api/invoicetemplate',require('./routes/invoicetemplate'));
 // ── New SaaS routes ────────────────────────────────────────────────────
 app.use('/api/bot',            require('./routes/bot'));
 app.use('/api/subscriptions',  require('./routes/subscriptions'));
-app.use('/api/superadmin' , require('./routes/superadmin'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', env: process.env.NODE_ENV, version: '4.0.0' }));
 
