@@ -14,7 +14,7 @@ const connectDB = async () => {
 };
 
 const seedDefaults = async () => {
-  const { Clinic, User, ClinicWebsite } = require('../models/index');
+  const { Clinic, User, ClinicWebsite, Subscription } = require('../models');
 
   let clinic = await Clinic.findOne({ slug: 'default' });
   if (!clinic) {
@@ -27,6 +27,12 @@ const seedDefaults = async () => {
       isActive: true,
     });
     console.log('Default clinic created');
+    await Subscription.findOneAndUpdate(
+      { clinicId: clinic._id },
+      { $set: { plan:'pro', status:'trial', trialDays:14, endDate: new Date(Date.now() + 14*24*60*60*1000) } },
+      { upsert:true }
+    );
+    console.log('Default subscription (Pro trial) created');
   }
 
   const adminExists = await User.findOne({ username: 'admin' });

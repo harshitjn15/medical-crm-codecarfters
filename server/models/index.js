@@ -303,6 +303,120 @@ const InvoiceTemplateSchema = new mongoose.Schema({
   regNumber:      String,
 }, { timestamps: true });
 
+
+// ── Plan config ────────────────────────────────────────────────────────
+const PLAN_FEATURES = {
+  basic: {
+    maxStaff:        3,
+    maxPatients:     500,
+    botEnabled:      false,
+    websiteEnabled:  false,
+    customInvoice:   false,
+    multiLocation:   false,
+    fileAttachments: true,
+    clinicalNotes:   true,
+    treatmentPlans:  true,
+    procedures:      true,
+    vitals:          true,
+  },
+  pro: {
+    maxStaff:        6,
+    maxPatients:     5000,
+    botEnabled:      true,
+    websiteEnabled:  true,
+    customInvoice:   true,
+    multiLocation:   false,
+    fileAttachments: true,
+    clinicalNotes:   true,
+    treatmentPlans:  true,
+    procedures:      true,
+    vitals:          true,
+  },
+  enterprise: {
+    maxStaff:        999,
+    maxPatients:     999999,
+    botEnabled:      true,
+    websiteEnabled:  true,
+    customInvoice:   true,
+    multiLocation:   true,
+    fileAttachments: true,
+    clinicalNotes:   true,
+    treatmentPlans:  true,
+    procedures:      true,
+    vitals:          true,
+  },
+};
+
+// ── BotConfig ──────────────────────────────────────────────────────────
+// Stores the WhatsApp bot configuration per clinic
+const BotConfigSchema = new mongoose.Schema({
+  clinicId:         { type: mongoose.Schema.Types.ObjectId, ref: 'Clinic', required: true, unique: true },
+  // Baileys session (QR-based) — sessionId identifies the WA session on server
+  sessionId:        String,
+  botNumber:        String,  // phone number the bot uses
+  isConnected:      { type: Boolean, default: false },
+  lastConnected:    Date,
+  qrCode:           String,  // base64 QR for scanning, cleared after connect
+
+  // Automation toggles
+  autoAppointmentReminder: { type: Boolean, default: true },
+  reminderHoursBefore:     { type: Number, default: 24 },
+  autoFollowupReminder:    { type: Boolean, default: true },
+  autoReviewRequest:       { type: Boolean, default: true },
+  reviewDelayHours:        { type: Number, default: 2 },
+  autoLocationShare:       { type: Boolean, default: true },
+  autoWelcome:             { type: Boolean, default: false },
+  autoPaymentReminder:     { type: Boolean, default: false },
+
+  // Google Maps link for location sharing
+  locationUrl:      String,
+  locationLabel:    String,
+
+  // Review link (Google, Practo, etc.)
+  reviewUrl:        String,
+
+  // Custom message templates (optional overrides)
+  tplAppointment:   String,
+  tplFollowup:      String,
+  tplReview:        String,
+  tplLocation:      String,
+  tplWelcome:       String,
+  tplPayment:       String,
+}, { timestamps: true });
+
+// ── BotMessage ─────────────────────────────────────────────────────────
+// Log of every message sent/received by the bot
+const BotMessageSchema = new mongoose.Schema({
+  clinicId:    { type: mongoose.Schema.Types.ObjectId, ref: 'Clinic', required: true },
+  patientId:   { type: mongoose.Schema.Types.ObjectId, ref: 'Patient' },
+  direction:   { type: String, enum: ['outbound', 'inbound'], required: true },
+  phone:       { type: String, required: true },
+  patientName: String,
+  messageType: { type: String, enum: ['appointment_reminder','followup_reminder','review_request','location_share','welcome','payment_reminder','inbound_reply','manual'], default: 'manual' },
+  body:        { type: String, required: true },
+  status:      { type: String, enum: ['sent','delivered','read','failed','received'], default: 'sent' },
+  refId:       String,   // appointmentId or followupId that triggered this
+  errorMsg:    String,
+}, { timestamps: true });
+
+BotMessageSchema.index({ clinicId: 1, createdAt: -1 });
+BotMessageSchema.index({ clinicId: 1, phone: 1 });
+
+// ── Subscription ───────────────────────────────────────────────────────
+const SubscriptionSchema = new mongoose.Schema({
+  clinicId:    { type: mongoose.Schema.Types.ObjectId, ref: 'Clinic', required: true, unique: true },
+  plan:        { type: String, enum: ['basic','pro','enterprise'], default: 'basic' },
+  status:      { type: String, enum: ['active','expired','trial','cancelled'], default: 'trial' },
+  startDate:   { type: Date, default: Date.now },
+  endDate:     Date,
+  trialDays:   { type: Number, default: 14 },
+  amount:      Number,
+  paymentRef:  String,
+  notes:       String,
+}, { timestamps: true });
+
+module.exports.PLAN_FEATURES = PLAN_FEATURES;
+
 module.exports = {
   Clinic:        mongoose.model('Clinic',        ClinicSchema),
   User:          mongoose.model('User',          UserSchema),
@@ -316,6 +430,9 @@ module.exports = {
   PatientFile:     mongoose.model('PatientFile',     PatientFileSchema),
   OtpCode:         mongoose.model('OtpCode',         OtpCodeSchema),
   InvoiceTemplate: mongoose.model('InvoiceTemplate', InvoiceTemplateSchema),
+  BotConfig:       mongoose.model('BotConfig',       BotConfigSchema),
+  BotMessage:      mongoose.model('BotMessage',       BotMessageSchema),
+  Subscription:    mongoose.model('Subscription',     SubscriptionSchema),
   VitalSigns:    mongoose.model('VitalSigns',    VitalSignsSchema),
   ClinicalNote:  mongoose.model('ClinicalNote',  ClinicalNoteSchema),
   TreatmentPlan: mongoose.model('TreatmentPlan', TreatmentPlanSchema),

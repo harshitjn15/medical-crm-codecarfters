@@ -16,10 +16,12 @@ import InvoicePrint from './components/invoices/InvoicePrint';
 import ClinicSettings from './components/clinics/ClinicSettings';
 import ProcedureLibrary from './components/procedures/ProcedureLibrary';
 import TreatmentPlanList from './components/treatmentplans/TreatmentPlanList';
+import BotDashboard from './components/bot/BotDashboard';
 import SuperAdminDashboard from './components/superadmin/SuperAdminDashboard';
 import AccessDenied from './components/auth/AccessDenied';
 import PublicHome from './components/public/PublicHome';
 import BookAppointment from './components/public/BookAppointment';
+import PricingPage from './components/pricing/PricingPage';
 
 const PrivateRoute = ({ children }) => {
   const { token, loading } = useContext(AuthContext);
@@ -40,10 +42,13 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/"     element={<PublicHome />} />
-          <Route path="/book" element={<BookAppointment />} />
-          <Route path="/login" element={<Login />} />
+          {/* Public */}
+          <Route path="/"        element={<PublicHome />} />
+          <Route path="/book"    element={<BookAppointment />} />
+          <Route path="/login"   element={<Login />} />
+          <Route path="/pricing" element={<PricingPage />} />
 
+          {/* Admin — all protected */}
           <Route path="/admin" element={<PrivateRoute><Layout /></PrivateRoute>}>
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard"              element={<Dashboard />} />
@@ -60,7 +65,8 @@ export default function App() {
             <Route path="invoices/:id/edit"      element={<InvoiceForm />} />
             <Route path="treatmentplans"         element={<TreatmentPlanList />} />
             <Route path="procedures"             element={<ProcedureLibrary />} />
-            <Route path="settings"              element={<ClinicSettings />} />
+            <Route path="bot"                    element={<BotDashboard />} />
+            <Route path="settings"               element={<ClinicSettings />} />
             <Route path="superadmin" element={<SuperAdminRoute><SuperAdminDashboard /></SuperAdminRoute>} />
           </Route>
         </Routes>
