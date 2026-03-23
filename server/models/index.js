@@ -415,9 +415,9 @@ const SubscriptionSchema = new mongoose.Schema({
   notes:       String,
 }, { timestamps: true });
 
-module.exports.PLAN_FEATURES = PLAN_FEATURES;
-
 module.exports = {
+  PLAN_FEATURES, // ✅ ADD HERE
+
   Clinic:        mongoose.model('Clinic',        ClinicSchema),
   User:          mongoose.model('User',          UserSchema),
   Patient:       mongoose.model('Patient',       PatientSchema),
@@ -426,13 +426,13 @@ module.exports = {
   Followup:      mongoose.model('Followup',      FollowupSchema),
   Invoice:       mongoose.model('Invoice',       InvoiceSchema),
   ClinicWebsite: mongoose.model('ClinicWebsite', ClinicWebsiteSchema),
-  WhatsappLog:     mongoose.model('WhatsappLog',     WhatsappLogSchema),
-  PatientFile:     mongoose.model('PatientFile',     PatientFileSchema),
-  OtpCode:         mongoose.model('OtpCode',         OtpCodeSchema),
+  WhatsappLog:   mongoose.model('WhatsappLog',   WhatsappLogSchema),
+  PatientFile:   mongoose.model('PatientFile',   PatientFileSchema),
+  OtpCode:       mongoose.model('OtpCode',       OtpCodeSchema),
   InvoiceTemplate: mongoose.model('InvoiceTemplate', InvoiceTemplateSchema),
-  BotConfig:       mongoose.model('BotConfig',       BotConfigSchema),
-  BotMessage:      mongoose.model('BotMessage',       BotMessageSchema),
-  Subscription:    mongoose.model('Subscription',     SubscriptionSchema),
+  BotConfig:     mongoose.model('BotConfig',     BotConfigSchema),
+  BotMessage:    mongoose.model('BotMessage',    BotMessageSchema),
+  Subscription:  mongoose.model('Subscription',  SubscriptionSchema),
   VitalSigns:    mongoose.model('VitalSigns',    VitalSignsSchema),
   ClinicalNote:  mongoose.model('ClinicalNote',  ClinicalNoteSchema),
   TreatmentPlan: mongoose.model('TreatmentPlan', TreatmentPlanSchema),
