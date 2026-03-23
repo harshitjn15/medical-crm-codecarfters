@@ -195,7 +195,7 @@ router.get('/plans', (req, res) => {
   res.json({
     plans: [
       {
-        id: 'basic',
+        _id: 'basic',
         name: 'Basic',
         price: 9999,
         period: 'year',

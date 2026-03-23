@@ -1,4 +1,4 @@
-const { Subscription } = require('../models');
+const { Subscription } = require('../models/index');
 const { PLAN_FEATURES } = require('../models/index');
 
 /**
