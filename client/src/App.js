@@ -24,6 +24,8 @@ import AccessDenied from './components/auth/AccessDenied';
 import PublicHome from './components/public/PublicHome';
 import BookAppointment from './components/public/BookAppointment';
 import PricingPage from './components/pricing/PricingPage';
+import ForgotPassword from './components/auth/ForgotPassword';
+import ResetPassword from './components/auth/ResetPassword';
 import { startSyncListener } from './utils/syncQueue';
 
 const PrivateRoute = ({ children }) => {
@@ -56,6 +58,8 @@ function AppContent() {
       <Route path="/"        element={<PublicHome />} />
       <Route path="/book"    element={<BookAppointment />} />
       <Route path="/login"   element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
       <Route path="/pricing" element={<PricingPage />} />
 
       {/* Admin — all protected */}

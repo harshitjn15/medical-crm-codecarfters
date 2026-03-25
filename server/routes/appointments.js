@@ -21,6 +21,13 @@ router.post('/book', resolvePublicTenant, async (req, res) => {
   try {
     const { patient_name, patient_phone, patient_email, appointment_date, appointment_time, reason, patient_id } = req.body;
     if (!patient_name || !appointment_date || !appointment_time) return res.status(400).json({ error: 'Name, date and time required' });
+
+    // Validate past dates/times
+    const apptDateTime = new Date(`${appointment_date}T${appointment_time}`);
+    if (apptDateTime < new Date()) {
+      return res.status(400).json({ error: 'Appointment cannot be scheduled for past date/time' });
+    }
+
     const conflict = await Appointment.findOne({ clinicId: req.clinicId, appointmentDate: appointment_date, appointmentTime: appointment_time, status: { $ne: 'cancelled' } });
     if (conflict) return res.status(409).json({ error: 'Slot already booked' });
     
@@ -48,6 +55,12 @@ router.post('/', async (req, res) => {
     const { patient_name, patient_phone, patient_email, appointment_date, appointment_time, reason, patient_id } = req.body;
     if (!patient_name || !appointment_date || !appointment_time)
       return res.status(400).json({ error: 'Name, date and time required' });
+
+    // Validate past dates/times
+    const apptDateTime = new Date(`${appointment_date}T${appointment_time}`);
+    if (apptDateTime < new Date()) {
+      return res.status(400).json({ error: 'Appointment cannot be scheduled for past date/time' });
+    }
     const conflict = await Appointment.findOne({
       clinicId: req.clinicId,
       appointmentDate: appointment_date,
@@ -117,6 +130,12 @@ router.patch('/:id/reschedule', requireRole('admin', 'super_admin'), async (req,
   try {
     const { appointment_date, appointment_time } = req.body;
     if (!appointment_date || !appointment_time) return res.status(400).json({ error: 'date and time required' });
+
+    // Validate past dates/times
+    const apptDateTime = new Date(`${appointment_date}T${appointment_time}`);
+    if (apptDateTime < new Date()) {
+      return res.status(400).json({ error: 'Appointment cannot be scheduled for past date/time' });
+    }
 
     // Check for slot conflict (excluding this appointment)
     const conflict = await Appointment.findOne({

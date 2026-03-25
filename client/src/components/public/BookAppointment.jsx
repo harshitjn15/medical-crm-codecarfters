@@ -17,6 +17,13 @@ export default function BookAppointment() {
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
   const handleSubmit = async () => {
     if (!form.patient_name||!form.appointment_date||!form.appointment_time) return setError('Please fill in all required fields');
+    
+    // Frontend validation for past dates/times
+    const apptDateTime = new Date(`${form.appointment_date}T${form.appointment_time}`);
+    if (apptDateTime < new Date()) {
+      return setError('Appointment cannot be scheduled for past date/time');
+    }
+
     setLoading(true); setError('');
     const res = await fetch(`/api/appointments/book?clinic=${clinicSlug}`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(form) });
     const data = await res.json();

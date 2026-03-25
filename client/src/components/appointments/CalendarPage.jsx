@@ -222,6 +222,67 @@ function AddAppointmentModal({ onClose, onSaved, authFetch, prefillDate }) {
   );
 }
 
+/* ── Reschedule Modal ─────────────────────────────────────────────────── */
+function RescheduleModal({ onClose, onSaved, authFetch, conflictData }) {
+  const { event, attemptedDate } = conflictData;
+  const [date, setDate] = useState(attemptedDate || getTodayStr());
+  const [time, setTime] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSave = async () => {
+    if (!time) return setError('Please select a time slot.');
+    setSaving(true);
+    setError('');
+    const r = await authFetch(`/api/appointments/${event.id}/reschedule`, {
+      method: 'PATCH',
+      body: JSON.stringify({ appointment_date: date, appointment_time: time }),
+    });
+    const data = await r.json();
+    if (!r.ok) {
+      setError(data.error || 'Failed to reschedule');
+      setSaving(false);
+      return;
+    }
+    setSaving(false);
+    onSaved(`${event.patient_name} rescheduled to ${date} at ${time}`);
+  };
+
+  return (
+    <div className="cp-modal-overlay" onClick={onClose} style={{ zIndex: 10000 }}>
+      <div className="cp-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+        <div className="cp-modal-header">
+          <h2>Slot Unavailable</h2>
+          <button className="cp-modal-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="cp-modal-body">
+          <p style={{ fontSize: 14, color: '#475569', marginBottom: 20, lineHeight: 1.5 }}>
+            That slot is already booked. Please choose another available slot for <strong>{event.patient_name}</strong>.
+          </p>
+          <div className="cp-form-group">
+            <label>Date</label>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} />
+          </div>
+          <div className="cp-form-group">
+            <label>Available Time Slots</label>
+            <select value={time} onChange={e => setTime(e.target.value)}>
+              <option value="">Select a time...</option>
+              {ALL_SLOTS.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          {error && <div className="cp-modal-error">{error}</div>}
+        </div>
+        <div className="cp-modal-footer">
+          <button className="cp-btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="cp-btn-primary" onClick={handleSave} disabled={saving || !time}>
+            {saving ? 'Rescheduling...' : 'Confirm Slot'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Main CalendarPage ──────────────────────────────────────────────────── */
 export default function CalendarPage() {
   const { authFetch, user } = useContext(AuthContext);
@@ -237,6 +298,7 @@ export default function CalendarPage() {
   const [rescheduling, setRescheduling] = useState(false);
   const [toast, setToast]           = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [slotConflictEvent, setSlotConflictEvent] = useState(null);
   const [prefillDate, setPrefillDate]   = useState('');
 
   // Filters
@@ -283,8 +345,22 @@ export default function CalendarPage() {
 
   const onEventDrop = useCallback(async ({ event, start }) => {
     if (user?.role === 'staff') { showToast('Only admins can reschedule', 'error'); return; }
-    const newDate = moment(start).format('YYYY-MM-DD');
-    const newTime = moment(start).format('HH:mm');
+
+    const oldDateTime = moment(`${event.appointment_date}T${event.appointment_time}`);
+    if (oldDateTime.isBefore(moment())) {
+      showToast('Cannot reschedule past appointments', 'error');
+      return;
+    }
+
+    const newDateTime = moment(start);
+    if (newDateTime.isBefore(moment())) {
+      showToast('Cannot reschedule to a past date/time', 'error');
+      return;
+    }
+
+    const newDate = newDateTime.format('YYYY-MM-DD');
+    const newTime = newDateTime.format('HH:mm');
+
     setRescheduling(true);
     const r = await authFetch(`/api/appointments/${event.id}/reschedule`, {
       method: 'PATCH',
@@ -292,7 +368,14 @@ export default function CalendarPage() {
     });
     const data = await r.json();
     setRescheduling(false);
-    if (!r.ok) { showToast(data.error || 'Reschedule failed', 'error'); }
+
+    if (!r.ok) { 
+        if (data.error === 'Slot already booked') {
+           setSlotConflictEvent({ event, attemptedDate: newDate });
+        } else {
+           showToast(data.error || 'Reschedule failed', 'error'); 
+        }
+    }
     else { showToast(`${event.patient_name} rescheduled to ${newDate} at ${newTime}`); fetchEvents(date, view); fetchToday(); }
   }, [authFetch, fetchEvents, date, view, user]);
 
@@ -507,6 +590,21 @@ export default function CalendarPage() {
           prefillDate={prefillDate}
           onClose={() => setShowAddModal(false)}
           onSaved={() => { setShowAddModal(false); fetchEvents(date, view); fetchToday(); showToast('Appointment scheduled!'); }}
+        />
+      )}
+
+      {/* Reschedule on Conflict modal */}
+      {slotConflictEvent && (
+        <RescheduleModal
+          authFetch={authFetch}
+          conflictData={slotConflictEvent}
+          onClose={() => setSlotConflictEvent(null)}
+          onSaved={(msg) => {
+            setSlotConflictEvent(null);
+            fetchEvents(date, view);
+            fetchToday();
+            showToast(msg);
+          }}
         />
       )}
     </div>

@@ -25,81 +25,121 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = (tokenVal, userData) => {
+  const login = (tokenVal, refreshTokenVal, userData) => {
     localStorage.setItem('token', tokenVal);
+    if (refreshTokenVal) localStorage.setItem('refreshToken', refreshTokenVal);
     localStorage.setItem('user', JSON.stringify(userData));
     setToken(tokenVal);
     setUser(userData);
   };
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async (sessionExpired = false) => {
+    const rt = localStorage.getItem('refreshToken');
+    if (rt) {
+      try {
+        await fetch('/api/auth/logout', { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken: rt })
+        });
+      } catch (e) {}
+    }
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     setToken(null);
     setUser(null);
+    if (sessionExpired) {
+      window.location.href = '/login?sessionExpired=true';
+    } else {
+      window.location.href = '/login';
+    }
   }, []);
 
+  const handleRefresh = async () => {
+    try {
+      const rt = localStorage.getItem('refreshToken');
+      if (!rt) throw new Error('No refresh token');
+      const res = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: rt })
+      });
+      if (!res.ok) throw new Error('Refresh failed');
+      const data = await res.json();
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('refreshToken', data.refreshToken);
+      setToken(data.token);
+      tokenRef.current = data.token;
+      return data.token;
+    } catch (err) {
+      logout(true);
+      return null;
+    }
+  };
+
   const authFetch = useCallback(async (url, options = {}) => {
-    const currentToken = tokenRef.current;
-    const method = (options.method || 'GET').toUpperCase();
-    const isGet = method === 'GET';
-    const headers = {
+    let currentToken = tokenRef.current;
+    let method = (options.method || 'GET').toUpperCase();
+    let isGet = method === 'GET';
+    const getHeaders = (tok) => ({
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${currentToken}`,
+      Authorization: `Bearer ${tok}`,
       ...(options.headers || {}),
-    };
+    });
 
-    // ── GET: stale-while-revalidate ──────────────────────────────────────
+    // ── GET: Network-First with Cache Fallback ───────────────────────────
     if (isGet) {
-      // 1. Start network fetch with timeout (aborts if offline within 5 s)
-      const networkPromise = fetchWithTimeout(url, { ...options, headers }, FETCH_TIMEOUT_MS)
-        .then(async res => {
-          if (res.ok) {
-            const clone = res.clone();
-            clone.json().then(data => cacheApiData(url, data)).catch(() => {});
+      try {
+        let networkRes = await fetchWithTimeout(url, { ...options, headers: getHeaders(currentToken) }, FETCH_TIMEOUT_MS);
+        if (networkRes.status === 401) {
+          const newToken = await handleRefresh();
+          if (newToken) {
+            networkRes = await fetchWithTimeout(url, { ...options, headers: getHeaders(newToken) }, FETCH_TIMEOUT_MS);
           }
-          if (res.status === 401) logout();
-          return res;
-        })
-        .catch(() => null); // null = network gone / timed out
-
-      // 2. Read stale cache immediately
-      const cached = await getCachedApiData(url);
-
-      if (cached) {
-        // Serve cached data right away; network promise will update cache for next visit
-        return new Response(JSON.stringify(cached), {
+        }
+        if (networkRes.ok) {
+          const clone = networkRes.clone();
+          clone.json().then(data => cacheApiData(url, data)).catch(() => {});
+        }
+        return networkRes;
+      } catch (err) {
+        // Network failed (offline or timeout) -> fallback to cache
+        const cached = await getCachedApiData(url);
+        if (cached) {
+          return new Response(JSON.stringify(cached), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        // No cache -> return empty shape
+        const emptyShape = url.includes('/patients')
+          ? { patients: [], total: 0 }
+          : url.includes('/appointments')
+          ? { appointments: [], total: 0 }
+          : url.includes('/prescriptions')
+          ? { prescriptions: [], total: 0 }
+          : url.includes('/invoices')
+          ? { invoices: [], total: 0 }
+          : url.includes('/followups')
+          ? { followups: [], total: 0 }
+          : {};
+        return new Response(JSON.stringify(emptyShape), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         });
       }
-
-      // 3. No cache yet — wait for network
-      const netRes = await networkPromise;
-      if (netRes) return netRes;
-
-      // 4. Totally offline and no cache — return a safe empty object
-      const emptyShape = url.includes('/patients')
-        ? { patients: [], total: 0 }
-        : url.includes('/appointments')
-        ? { appointments: [], total: 0 }
-        : url.includes('/prescriptions')
-        ? { prescriptions: [], total: 0 }
-        : url.includes('/invoices')
-        ? { invoices: [], total: 0 }
-        : url.includes('/followups')
-        ? { followups: [], total: 0 }
-        : {};
-      return new Response(JSON.stringify(emptyShape), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
     }
 
     // ── Mutation (POST / PUT / PATCH / DELETE) ───────────────────────────
     try {
-      const res = await fetchWithTimeout(url, { ...options, headers }, FETCH_TIMEOUT_MS);
-      if (res.status === 401) logout();
+      let res = await fetchWithTimeout(url, { ...options, headers: getHeaders(currentToken) }, FETCH_TIMEOUT_MS);
+      if (res.status === 401) {
+        const newToken = await handleRefresh();
+        if (newToken) {
+          res = await fetchWithTimeout(url, { ...options, headers: getHeaders(newToken) }, FETCH_TIMEOUT_MS);
+        }
+      }
       return res;
     } catch {
       // Offline — queue the mutation to retry when back online

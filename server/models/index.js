@@ -42,6 +42,9 @@ const UserSchema = new mongoose.Schema({
   email:     String,
   role:      { type: String, enum: ['super_admin', 'admin', 'staff'], default: 'admin' },
   phone:     String,
+  refreshToken:         String,
+  resetPasswordToken:   String,
+  resetPasswordExpire:  Date,
 }, { timestamps: true });
 
 // ── Patient ───────────────────────────────────────────────────────────────

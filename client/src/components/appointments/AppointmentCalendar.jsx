@@ -45,6 +45,64 @@ const toEvent = (a) => {
   };
 };
 
+/* ── Reschedule Modal ─────────────────────────────────────────────────── */
+function RescheduleModal({ onClose, onSaved, authFetch, conflictData }) {
+  const { event, attemptedDate } = conflictData;
+  const [date, setDate] = useState(attemptedDate || moment().format('YYYY-MM-DD'));
+  const [time, setTime] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const ALL_SLOTS = ['09:00','09:30','10:00','10:30','11:00','11:30','12:00','14:00','14:30','15:00','15:30','16:00','16:30','17:00'];
+
+  const handleSave = async () => {
+    if (!time) return setError('Please select a time slot.');
+    setSaving(true);
+    setError('');
+    const r = await authFetch(`/api/appointments/${event.id}/reschedule`, {
+      method: 'PATCH',
+      body: JSON.stringify({ appointment_date: date, appointment_time: time }),
+    });
+    const data = await r.json();
+    if (!r.ok) {
+      setError(data.error || 'Failed to reschedule');
+      setSaving(false);
+      return;
+    }
+    setSaving(false);
+    onSaved(`✅ ${event.patient_name} rescheduled to ${date} ${time}`, { newDate: date, newTime: time, event });
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
+      <div style={{ background: '#fff', padding: 24, borderRadius: 12, width: 400, maxWidth: '90%', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
+        <h3 style={{ margin: '0 0 16px', color: '#1e293b' }}>Slot Unavailable</h3>
+        <p style={{ margin: '0 0 20px', fontSize: 14, color: '#475569', lineHeight: 1.5 }}>
+          That slot is already booked. Please choose another available slot for <strong>{event.patient_name}</strong>.
+        </p>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>Date</label>
+          <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: 6, boxSizing: 'border-box' }} />
+        </div>
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>Available Time Slots</label>
+          <select value={time} onChange={e => setTime(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: 6, boxSizing: 'border-box' }}>
+            <option value="">Select a time...</option>
+            {ALL_SLOTS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        {error && <div style={{ color: '#dc2626', fontSize: 13, marginBottom: 16, background: '#fef2f2', padding: 8, borderRadius: 6 }}>{error}</div>}
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ padding: '8px 16px', border: '1px solid #cbd5e1', background: '#fff', borderRadius: 6, cursor: 'pointer', fontWeight: 500 }}>Cancel</button>
+          <button onClick={handleSave} disabled={saving || !time} style={{ padding: '8px 16px', border: 'none', background: '#3b82f6', color: '#fff', borderRadius: 6, cursor: 'pointer', opacity: (saving || !time) ? 0.6 : 1, fontWeight: 500 }}>
+            {saving ? 'Rescheduling...' : 'Confirm Slot'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AppointmentCalendar() {
   const { authFetch, user } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -54,6 +112,7 @@ export default function AppointmentCalendar() {
   const [selected, setSelected] = useState(null);
   const [loading, setLoading]   = useState(false);
   const [rescheduling, setRescheduling] = useState(false);
+  const [slotConflictEvent, setSlotConflictEvent] = useState(null);
   const [toast, setToast]   = useState('');
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
@@ -84,9 +143,22 @@ export default function AppointmentCalendar() {
 
   // Drag-and-drop reschedule
   const onEventDrop = useCallback(async ({ event, start }) => {
-    if (user?.role === 'staff') { showToast('Only admins can reschedule appointments'); return; }
-    const newDate = moment(start).format('YYYY-MM-DD');
-    const newTime = moment(start).format('HH:mm');
+    if (user?.role === 'staff') { showToast('Only admins can reschedule'); return; }
+
+    const oldDateTime = moment(`${event.appointment_date}T${event.appointment_time}`);
+    if (oldDateTime.isBefore(moment())) {
+      showToast('Cannot reschedule past appointments');
+      return;
+    }
+
+    const newDateTime = moment(start);
+    if (newDateTime.isBefore(moment())) {
+      showToast('Cannot reschedule to a past date/time');
+      return;
+    }
+
+    const newDate = newDateTime.format('YYYY-MM-DD');
+    const newTime = newDateTime.format('HH:mm');
     setRescheduling(true);
     try {
       const r = await authFetch(`/api/appointments/${event.id}/reschedule`, {
@@ -94,8 +166,13 @@ export default function AppointmentCalendar() {
         body: JSON.stringify({ appointment_date: newDate, appointment_time: newTime }),
       });
       const data = await r.json();
-      if (!r.ok) { showToast(data.error || 'Reschedule failed'); }
-      else {
+      if (!r.ok) { 
+        if (data.error === 'Slot already booked') {
+            setSlotConflictEvent({ event, attemptedDate: newDate });
+        } else {
+            showToast(data.error || 'Reschedule failed'); 
+        }
+      } else {
         showToast(`✅ ${event.patient_name} rescheduled to ${newDate} ${newTime}`);
         fetchEvents(date, view);
         if (selected?.id === event.id) setSelected({ ...selected, appointment_date: newDate, appointment_time: newTime });
@@ -201,6 +278,23 @@ export default function AppointmentCalendar() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Reschedule on Conflict modal */}
+      {slotConflictEvent && (
+        <RescheduleModal
+          authFetch={authFetch}
+          conflictData={slotConflictEvent}
+          onClose={() => setSlotConflictEvent(null)}
+          onSaved={(msg, { newDate, newTime, event }) => {
+            setSlotConflictEvent(null);
+            fetchEvents(date, view);
+            showToast(msg);
+            if (selected?.id === event.id) {
+              setSelected({ ...selected, appointment_date: newDate, appointment_time: newTime });
+            }
+          }}
+        />
       )}
     </div>
   );

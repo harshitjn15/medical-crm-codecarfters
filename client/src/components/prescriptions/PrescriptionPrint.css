@@ -193,5 +193,5 @@
     box-shadow: none;
   }
   body { background: #fff !important; }
-  .layout { display: none !important; }
+  .sidebar { display: none !important; }
 }
