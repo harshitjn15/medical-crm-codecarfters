@@ -43,14 +43,14 @@ export default function PatientDetail() {
   const fmt = n => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n || 0);
 
   const TABS = [
-    { id: 'overview',     label: '📋 Overview' },
-    { id: 'vitals',       label: '🩺 Vital Signs' },
-    { id: 'notes',        label: '📝 Clinical Notes' },
-    { id: 'treatment',    label: '🗓 Treatment Plans' },
+    { id: 'overview', label: '📋 Overview' },
+    { id: 'vitals', label: '🩺 Vital Signs' },
+    { id: 'notes', label: '📝 Clinical Notes' },
+    { id: 'treatment', label: '🗓 Treatment Plans' },
     ...(isDental ? [{ id: 'dental', label: '🦷 Dental Chart' }] : []),
-    { id: 'prescriptions',label: `💊 Prescriptions (${prescriptions.length})` },
-    { id: 'invoices',     label: `💰 Invoices (${invoices.length})` },
-    { id: 'files',        label: '📎 Files & Reports' },
+    { id: 'prescriptions', label: `💊 Prescriptions (${prescriptions.length})` },
+    { id: 'invoices', label: `💰 Invoices (${invoices.length})` },
+    { id: 'files', label: '📎 Files & Reports' },
   ];
 
   const tabStyle = (active) => ({
@@ -79,11 +79,11 @@ export default function PatientDetail() {
 
       {/* Quick strip */}
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 20, padding: '10px 16px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: 14, alignItems: 'center' }}>
-        {patient.phone       && <span>📱 {patient.phone}</span>}
+        {patient.phone && <span>📱 {patient.phone}</span>}
         {patient.dateOfBirth && <span>🎂 {patient.dateOfBirth}</span>}
-        {patient.gender      && <span>⚧️ {patient.gender}</span>}
-        {patient.bloodGroup  && <span className="badge badge-info">🩸 {patient.bloodGroup}</span>}
-        {patient.allergies   && <span style={{ color: 'var(--danger)', fontWeight: 600 }}>⚠️ Allergies: {patient.allergies}</span>}
+        {patient.gender && <span>⚧️ {patient.gender}</span>}
+        {patient.bloodGroup && <span className="badge badge-info">🩸 {patient.bloodGroup}</span>}
+        {patient.allergies && <span style={{ color: 'var(--danger)', fontWeight: 600 }}>⚠️ Allergies: {patient.allergies}</span>}
       </div>
 
       {/* Tabs */}
@@ -98,22 +98,22 @@ export default function PatientDetail() {
             <div className="card">
               <div className="card-header"><h2>Personal Info</h2></div>
               <div className="card-body">
-                {[['📱 Phone',patient.phone],['✉️ Email',patient.email],['🎂 DOB',patient.dateOfBirth],['⚧️ Gender',patient.gender],['🩸 Blood',patient.bloodGroup],['📍 Address',patient.address]].map(([l,v]) => v ? (
-                  <div key={l} style={{ display:'flex', gap:10, marginBottom:10, fontSize:14 }}>
-                    <span style={{ color:'var(--text-muted)', minWidth:90 }}>{l}</span><span>{v}</span>
+                {[['📱 Phone', patient.phone], ['✉️ Email', patient.email], ['🎂 DOB', patient.dateOfBirth], ['⚧️ Gender', patient.gender], ['🩸 Blood', patient.bloodGroup], ['📍 Address', patient.address]].map(([l, v]) => v ? (
+                  <div key={l} style={{ display: 'flex', gap: 10, marginBottom: 10, fontSize: 14 }}>
+                    <span style={{ color: 'var(--text-muted)', minWidth: 90 }}>{l}</span><span>{v}</span>
                   </div>
                 ) : null)}
               </div>
             </div>
-            {patient.allergies && <div className="card" style={{ borderLeft:'4px solid var(--danger)' }}><div className="card-body"><h3 style={{ color:'var(--danger)', marginBottom:6 }}>⚠️ Allergies</h3><p style={{ fontSize:14 }}>{patient.allergies}</p></div></div>}
-            {patient.medicalHistory && <div className="card"><div className="card-header"><h2>Medical History</h2></div><div className="card-body"><p style={{ fontSize:14, lineHeight:1.7 }}>{patient.medicalHistory}</p></div></div>}
+            {patient.allergies && <div className="card" style={{ borderLeft: '4px solid var(--danger)' }}><div className="card-body"><h3 style={{ color: 'var(--danger)', marginBottom: 6 }}>⚠️ Allergies</h3><p style={{ fontSize: 14 }}>{patient.allergies}</p></div></div>}
+            {patient.medicalHistory && <div className="card"><div className="card-header"><h2>Medical History</h2></div><div className="card-body"><p style={{ fontSize: 14, lineHeight: 1.7 }}>{patient.medicalHistory}</p></div></div>}
           </div>
           <div className="card">
             <div className="card-header"><h2>🔔 Follow-ups ({followups.length})</h2></div>
             <div className="table-container">
-              {!followups.length ? <div className="empty-state" style={{ padding:24 }}><p>No follow-ups</p></div> : (
+              {!followups.length ? <div className="empty-state" style={{ padding: 24 }}><p>No follow-ups</p></div> : (
                 <table><thead><tr><th>Date</th><th>Type</th><th>Status</th></tr></thead>
-                  <tbody>{followups.map(f => <tr key={f.id}><td>{f.followupDate||f.followup_date}</td><td>{f.followupType||f.followup_type}</td><td><span className={`badge badge-${f.status==='completed'?'success':'warning'}`}>{f.status}</span></td></tr>)}</tbody>
+                  <tbody>{followups.map(f => <tr key={f.id}><td>{f.followupDate || f.followup_date}</td><td>{f.followupType || f.followup_type}</td><td><span className={`badge badge-${f.status === 'completed' ? 'success' : 'warning'}`}>{f.status}</span></td></tr>)}</tbody>
                 </table>
               )}
             </div>
@@ -121,18 +121,18 @@ export default function PatientDetail() {
         </div>
       )}
 
-      {tab === 'vitals'    && <div className="card"><div className="card-body"><VitalsPanel patientId={id} /></div></div>}
-      {tab === 'notes'     && <div className="card"><div className="card-body"><ClinicalNotes patientId={id} /></div></div>}
+      {tab === 'vitals' && <div className="card"><div className="card-body"><VitalsPanel patientId={id} /></div></div>}
+      {tab === 'notes' && <div className="card"><div className="card-body"><ClinicalNotes patientId={id} /></div></div>}
       {tab === 'treatment' && <div className="card"><div className="card-body"><TreatmentPlanPanel patientId={id} /></div></div>}
       {tab === 'dental' && isDental && <div className="card"><div className="card-header"><h2>🦷 Dental Chart — {patient.name}</h2></div><div className="card-body"><ToothChart patientId={id} /></div></div>}
 
       {tab === 'prescriptions' && (
         <div className="card">
-          <div className="card-header"><h2>💊 Prescriptions</h2><button className="btn btn-secondary btn-sm" onClick={()=>navigate(`/admin/prescriptions/new?patient_id=${id}`)}>+ New</button></div>
+          <div className="card-header"><h2>💊 Prescriptions</h2><button className="btn btn-secondary btn-sm" onClick={() => navigate(`/admin/prescriptions/new?patient_id=${id}`)}>+ New</button></div>
           <div className="table-container">
-            {!prescriptions.length ? <div className="empty-state" style={{ padding:24 }}><p>No prescriptions yet</p></div> : (
+            {!prescriptions.length ? <div className="empty-state" style={{ padding: 24 }}><p>No prescriptions yet</p></div> : (
               <table><thead><tr><th>Diagnosis</th><th>Medications</th><th>Date</th><th></th></tr></thead>
-                <tbody>{prescriptions.map(rx=><tr key={rx.id}><td>{rx.diagnosis||'—'}</td><td>{(rx.medications||[]).slice(0,2).map((m,i)=><span key={i} className="badge badge-info" style={{marginRight:4}}>{m.name||m}</span>)}</td><td style={{fontSize:12,color:'var(--text-muted)'}}>{rx.createdAt?.split('T')[0]}</td><td><button className="btn-icon" onClick={()=>navigate(`/admin/prescriptions/${rx.id}/edit`)}>✏️</button></td></tr>)}</tbody>
+                <tbody>{prescriptions.map(rx => <tr key={rx.id}><td>{rx.diagnosis || '—'}</td><td>{(rx.medications || []).slice(0, 2).map((m, i) => <span key={i} className="badge badge-info" style={{ marginRight: 4 }}>{m.name || m}</span>)}</td><td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{rx.createdAt?.split('T')[0]}</td><td><button className="btn-icon" onClick={() => navigate(`/admin/prescriptions/${rx.id}/edit`)}>✏️</button></td></tr>)}</tbody>
               </table>
             )}
           </div>
@@ -141,14 +141,14 @@ export default function PatientDetail() {
 
       {tab === 'invoices' && (
         <div className="card">
-          <div className="card-header"><h2>💰 Invoices</h2><button className="btn btn-secondary btn-sm" onClick={()=>navigate(`/admin/invoices/new?patient_id=${id}`)}>+ New</button></div>
+          <div className="card-header"><h2>💰 Invoices</h2><button className="btn btn-secondary btn-sm" onClick={() => navigate(`/admin/invoices/new?patient_id=${id}`)}>+ New</button></div>
           <div className="table-container">
-            {!invoices.length ? <div className="empty-state" style={{ padding:24 }}><p>No invoices yet</p></div> : (
+            {!invoices.length ? <div className="empty-state" style={{ padding: 24 }}><p>No invoices yet</p></div> : (
               <table><thead><tr><th>Invoice #</th><th>Date</th><th>Total</th><th>Status</th></tr></thead>
-                <tbody>{invoices.map(inv=>{
-                  const num=inv.invoice_number||inv.invoiceNumber;
-                  const dt=inv.issue_date||inv.issueDate;
-                  return <tr key={inv.id} style={{cursor:'pointer'}} onClick={()=>navigate(`/admin/invoices/${inv.id}`)}><td style={{fontFamily:'monospace',color:'var(--primary)'}}>{num}</td><td style={{fontSize:12,color:'var(--text-muted)'}}>{dt}</td><td>{fmt(inv.total)}</td><td><span className={`badge badge-${inv.status==='paid'?'success':inv.status==='cancelled'?'gray':'warning'}`}>{inv.status}</span></td></tr>;
+                <tbody>{invoices.map(inv => {
+                  const num = inv.invoice_number || inv.invoiceNumber;
+                  const dt = inv.issue_date || inv.issueDate;
+                  return <tr key={inv.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/admin/invoices/${inv.id}`)}><td style={{ fontFamily: 'monospace', color: 'var(--primary)' }}>{num}</td><td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{dt}</td><td>{fmt(inv.total)}</td><td><span className={`badge badge-${inv.status === 'paid' ? 'success' : inv.status === 'cancelled' ? 'gray' : 'warning'}`}>{inv.status}</span></td></tr>;
                 })}</tbody>
               </table>
             )}
@@ -158,7 +158,7 @@ export default function PatientDetail() {
 
       {tab === 'files' && <div className="card"><div className="card-body"><FileAttachments patientId={id} /></div></div>}
 
-      {showEdit && <PatientModal patient={patient} onClose={()=>setShowEdit(false)} onSaved={()=>{ setShowEdit(false); load(); }} />}
+      {showEdit && <PatientModal patient={patient} onClose={() => setShowEdit(false)} onSaved={() => { setShowEdit(false); load(); }} />}
     </div>
   );
 }

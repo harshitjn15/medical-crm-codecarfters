@@ -4,12 +4,9 @@ const bcrypt = require('bcryptjs');
 const { Clinic, User, Patient, Appointment, Invoice, ClinicWebsite } = require('../models');
 const { verifyToken } = require('../middleware/auth');
 const { resolveTenant } = require('../middleware/tenantMiddleware');
+const { requireRole } = require('../middleware/requireRole');
 
-const superAdminOnly = (req, res, next) => {
-  if (req.userRole !== 'super_admin') return res.status(403).json({ error: 'Super admin only' });
-  next();
-};
-router.use(verifyToken, resolveTenant, superAdminOnly);
+router.use(verifyToken, resolveTenant, requireRole('super_admin'));
 
 router.get('/stats', async (req, res) => {
   try {

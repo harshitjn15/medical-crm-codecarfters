@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { Appointment } = require('../models');
+const { Appointment, Patient } = require('../models');
 const { verifyToken } = require('../middleware/auth');
 const { resolveTenant, resolvePublicTenant } = require('../middleware/tenantMiddleware');
+const { requireRole } = require('../middleware/requireRole');
 
 const ALL_SLOTS = ['09:00','09:30','10:00','10:30','11:00','11:30','12:00','14:00','14:30','15:00','15:30','16:00','16:30','17:00'];
 
@@ -13,16 +14,26 @@ router.get('/available-slots', resolvePublicTenant, async (req, res) => {
     const booked = await Appointment.find({ clinicId: req.clinicId, appointmentDate: date, status: { $ne: 'cancelled' } }).select('appointmentTime');
     const bookedTimes = booked.map(b => b.appointmentTime);
     res.json({ slots: ALL_SLOTS.filter(s => !bookedTimes.includes(s)), booked: bookedTimes });
-  } catch (err) { console.error('[appointments]', err.message); res.status(500).json({ error: err.message || 'Failed' }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to fetch available slots' }); }
 });
 
 router.post('/book', resolvePublicTenant, async (req, res) => {
   try {
-    const { patient_name, patient_phone, patient_email, appointment_date, appointment_time, reason } = req.body;
+    const { patient_name, patient_phone, patient_email, appointment_date, appointment_time, reason, patient_id } = req.body;
     if (!patient_name || !appointment_date || !appointment_time) return res.status(400).json({ error: 'Name, date and time required' });
     const conflict = await Appointment.findOne({ clinicId: req.clinicId, appointmentDate: appointment_date, appointmentTime: appointment_time, status: { $ne: 'cancelled' } });
     if (conflict) return res.status(409).json({ error: 'Slot already booked' });
-    const a = await Appointment.create({ clinicId: req.clinicId, patientName: patient_name, patientPhone: patient_phone, patientEmail: patient_email, appointmentDate: appointment_date, appointmentTime: appointment_time, reason });
+    
+    let finalPatientId = patient_id;
+    if (!finalPatientId) {
+      let p = null;
+      if (patient_phone) p = await Patient.findOne({ clinicId: req.clinicId, phone: patient_phone });
+      if (!p && patient_email) p = await Patient.findOne({ clinicId: req.clinicId, email: patient_email });
+      if (!p) p = await Patient.create({ clinicId: req.clinicId, name: patient_name, phone: patient_phone, email: patient_email });
+      finalPatientId = p._id;
+    }
+
+    const a = await Appointment.create({ clinicId: req.clinicId, patientId: finalPatientId, patientName: patient_name, patientPhone: patient_phone, patientEmail: patient_email, appointmentDate: appointment_date, appointmentTime: appointment_time, reason });
     res.status(201).json({ message: 'Booked', id: a.id });
   } catch (err) { res.status(500).json({ error: 'Booking failed' }); }
 });
@@ -31,28 +42,100 @@ router.get('/clinic-info', resolvePublicTenant, (req, res) => res.json(req.clini
 
 router.use(verifyToken, resolveTenant);
 
+// ── POST /api/appointments — authenticated booking (staff/admin) ─────────
+router.post('/', async (req, res) => {
+  try {
+    const { patient_name, patient_phone, patient_email, appointment_date, appointment_time, reason, patient_id } = req.body;
+    if (!patient_name || !appointment_date || !appointment_time)
+      return res.status(400).json({ error: 'Name, date and time required' });
+    const conflict = await Appointment.findOne({
+      clinicId: req.clinicId,
+      appointmentDate: appointment_date,
+      appointmentTime: appointment_time,
+      status: { $ne: 'cancelled' },
+    });
+    if (conflict) return res.status(409).json({ error: 'Slot already booked', conflictWith: conflict.patientName });
+
+    let finalPatientId = patient_id;
+    if (!finalPatientId) {
+      let p = null;
+      if (patient_phone) p = await Patient.findOne({ clinicId: req.clinicId, phone: patient_phone });
+      if (!p && patient_email) p = await Patient.findOne({ clinicId: req.clinicId, email: patient_email });
+      if (!p) p = await Patient.create({ clinicId: req.clinicId, name: patient_name, phone: patient_phone, email: patient_email });
+      finalPatientId = p._id;
+    }
+
+    const a = await Appointment.create({
+      clinicId: req.clinicId,
+      patientId: finalPatientId,
+      patientName: patient_name,
+      patientPhone: patient_phone,
+      patientEmail: patient_email,
+      appointmentDate: appointment_date,
+      appointmentTime: appointment_time,
+      reason,
+    });
+    res.status(201).json({ message: 'Booked', id: a.id });
+  } catch (err) { res.status(500).json({ error: 'Booking failed' }); }
+});
+
+
+// Supports: ?status=, ?filter=today, ?from=YYYY-MM-DD&to=YYYY-MM-DD, ?page=, ?limit=
 router.get('/', async (req, res) => {
   try {
-    const { status, filter, page = 1, limit = 30 } = req.query;
+    const { status, filter, from, to, page = 1, limit = 200 } = req.query;
     const q = { clinicId: req.clinicId };
     if (status) q.status = status;
     if (filter === 'today') q.appointmentDate = new Date().toISOString().split('T')[0];
+    // Date range filter for calendar view
+    if (from || to) {
+      q.appointmentDate = {};
+      if (from) q.appointmentDate.$gte = from;
+      if (to)   q.appointmentDate.$lte = to;
+    }
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [docs, total] = await Promise.all([
-      Appointment.find(q).sort({ appointmentDate: -1, appointmentTime: 1 }).skip(skip).limit(parseInt(limit)),
+      Appointment.find(q).sort({ appointmentDate: 1, appointmentTime: 1 }).skip(skip).limit(parseInt(limit)),
       Appointment.countDocuments(q),
     ]);
-    // Flatten camelCase → snake_case so client code works unchanged
+    // Flatten camelCase → snake_case AND include patientId for navigation
     const appointments = docs.map(a => ({
       ...a.toJSON(),
-      patient_name:  a.patientName,
-      patient_phone: a.patientPhone,
-      patient_email: a.patientEmail,
+      patient_name:     a.patientName,
+      patient_phone:    a.patientPhone,
+      patient_email:    a.patientEmail,
       appointment_date: a.appointmentDate,
       appointment_time: a.appointmentTime,
+      patient_id:       a.patientId?.toString() || null,
     }));
     res.json({ appointments, total });
-  } catch (err) { console.error('[appointments]', err.message); res.status(500).json({ error: err.message || 'Failed' }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to fetch appointments' }); }
+});
+
+// ── PATCH /:id/reschedule — drag-and-drop calendar reschedule ──────────
+router.patch('/:id/reschedule', requireRole('admin', 'super_admin'), async (req, res) => {
+  try {
+    const { appointment_date, appointment_time } = req.body;
+    if (!appointment_date || !appointment_time) return res.status(400).json({ error: 'date and time required' });
+
+    // Check for slot conflict (excluding this appointment)
+    const conflict = await Appointment.findOne({
+      clinicId: req.clinicId,
+      _id: { $ne: req.params.id },
+      appointmentDate: appointment_date,
+      appointmentTime: appointment_time,
+      status: { $ne: 'cancelled' },
+    });
+    if (conflict) return res.status(409).json({ error: 'Slot already booked', conflictWith: conflict.patientName });
+
+    const a = await Appointment.findOneAndUpdate(
+      { _id: req.params.id, clinicId: req.clinicId },
+      { $set: { appointmentDate: appointment_date, appointmentTime: appointment_time } },
+      { new: true }
+    );
+    if (!a) return res.status(404).json({ error: 'Not found' });
+    res.json({ message: 'Rescheduled', id: a.id, appointment_date: a.appointmentDate, appointment_time: a.appointmentTime });
+  } catch (err) { res.status(500).json({ error: 'Failed to reschedule' }); }
 });
 
 router.put('/:id', async (req, res) => {
@@ -65,15 +148,15 @@ router.put('/:id', async (req, res) => {
     );
     if (!a) return res.status(404).json({ error: 'Not found' });
     res.json({ message: 'Updated', id: a.id });
-  } catch (err) { console.error('[appointments]', err.message); res.status(500).json({ error: err.message || 'Failed' }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to update appointment' }); }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireRole('admin', 'super_admin'), async (req, res) => {
   try {
     const r = await Appointment.findOneAndDelete({ _id: req.params.id, clinicId: req.clinicId });
     if (!r) return res.status(404).json({ error: 'Not found' });
     res.json({ message: 'Deleted' });
-  } catch (err) { console.error('[appointments]', err.message); res.status(500).json({ error: err.message || 'Failed' }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to delete appointment' }); }
 });
 
 module.exports = router;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
+import { enqueueSyncItem } from '../../utils/offlineDB';
 
 const emptyMed = () => ({ name: '', dosage: '', frequency: '', duration: '' });
 
@@ -25,9 +26,27 @@ export default function PrescriptionForm() {
   const handleSubmit = async () => {
     if (!form.patient_id) return setError('Please select a patient');
     setSaving(true); setError('');
-    const res = await authFetch(isEdit ? `/api/prescriptions/${id}` : '/api/prescriptions', { method: isEdit?'PUT':'POST', body: JSON.stringify(form) });
+
+    // Offline fallback — save to IndexedDB
+    if (!navigator.onLine) {
+      const tempId = `offline_rx_${Date.now()}`;
+      await enqueueSyncItem({
+        tempId,
+        type: 'prescription',
+        endpoint: isEdit ? `/api/prescriptions/${id}` : '/api/prescriptions',
+        method: isEdit ? 'PUT' : 'POST',
+        payload: form,
+      });
+      setSaving(false);
+      setError('');
+      alert('📵 Saved offline! Will sync when you\'re back online.');
+      navigate('/admin/prescriptions');
+      return;
+    }
+
+    const res = await authFetch(isEdit ? `/api/prescriptions/${id}` : '/api/prescriptions', { method: isEdit ? 'PUT' : 'POST', body: JSON.stringify(form) });
     const data = await res.json();
-    if (!res.ok) { setError(data.error||'Save failed'); setSaving(false); return; }
+    if (!res.ok) { setError(data.error || 'Save failed'); setSaving(false); return; }
     navigate('/admin/prescriptions');
   };
 

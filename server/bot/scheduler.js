@@ -3,9 +3,10 @@
  * Runs on server startup. Checks for due reminders every 30 minutes.
  */
 const cron = require('node-cron');
-const { Appointment, Followup, Patient, Clinic, BotConfig, BotMessage, Subscription, Invoice } = require('../models');
+const { Appointment, Followup, Patient, Clinic, BotConfig, BotMessage, Subscription, Invoice, User } = require('../models');
 const { PLAN_FEATURES } = require('../models/index');
 const engine = require('./engine');
+const emailSvc = require('../services/emailService');
 
 let schedulerStarted = false;
 
@@ -107,6 +108,84 @@ const runFollowupReminders = async () => {
   }
 };
 
+// ── Job: 2-hour appointment reminder ────────────────────────────────────
+const runTwoHourReminders = async () => {
+  try {
+    const configs = await BotConfig.find({ reminderTwoHoursBefore: true });
+    for (const config of configs) {
+      if (!(await clinicHasBot(config.clinicId))) continue;
+      const targetDate = getTomorrowDate(2); // date 2 hours from now
+      const targetHour = new Date(Date.now() + 2 * 60 * 60 * 1000);
+      const targetTime = targetHour.toTimeString().slice(0, 5); // HH:MM
+
+      const appointments = await Appointment.find({
+        clinicId: config.clinicId,
+        appointmentDate: targetDate,
+        appointmentTime: targetTime,
+        status: 'scheduled',
+      });
+      for (const appt of appointments) {
+        const alreadySent = await BotMessage.findOne({ clinicId: config.clinicId, refId: appt._id.toString(), messageType: 'appointment_reminder', createdAt: { $gte: new Date(Date.now() - 3 * 60 * 60 * 1000) } });
+        if (alreadySent) continue;
+        const phone = appt.patientPhone || (appt.patientId ? (await Patient.findById(appt.patientId))?.phone : null);
+        if (!phone) continue;
+        const patient = { _id: appt.patientId, name: appt.patientName, phone };
+        const clinic  = await Clinic.findById(config.clinicId);
+        if (!clinic?.isActive) continue;
+        await engine.sendAppointmentReminder(clinic, patient, appt);
+
+        // Also send email if channel allows
+        if ((config.notifyChannel === 'email' || config.notifyChannel === 'both') && appt.patientEmail) {
+          const emailTpl = emailSvc.appointmentReminderEmail({ clinicName: clinic.name, patientName: appt.patientName, date: appt.appointmentDate, time: appt.appointmentTime, patientEmail: appt.patientEmail, hoursAhead: 2 });
+          await emailSvc.sendEmail(emailTpl);
+        }
+      }
+    }
+  } catch (err) { console.error('[scheduler] 2h reminder error:', err.message); }
+};
+
+// ── Job: Daily morning summary to staff ──────────────────────────────────
+const runDailySummary = async () => {
+  try {
+    const today = getToday();
+    // Find all active clinics with bot config enabled
+    const configs = await BotConfig.find({});
+    for (const config of configs) {
+      const clinic = await Clinic.findById(config.clinicId);
+      if (!clinic?.isActive) continue;
+
+      // Get today's appointments
+      const appointments = await Appointment.find({
+        clinicId: config.clinicId,
+        appointmentDate: today,
+        status: { $ne: 'cancelled' },
+      }).sort({ appointmentTime: 1 });
+
+      // Get all staff users with phone numbers
+      const staffUsers = await User.find({
+        clinicId: config.clinicId,
+        role: { $in: ['admin', 'super_admin'] },
+      });
+
+      for (const staff of staffUsers) {
+        const apptData = appointments.map(a => ({ appointmentTime: a.appointmentTime, patientName: a.patientName, reason: a.reason }));
+
+        // Send WhatsApp summary
+        if (staff.phone && config.notifyChannel !== 'email') {
+          const msgLines = [`📅 *Daily Schedule — ${today}*`, `🏥 ${clinic.name}`, '', ...apptData.map((a, i) => `${i + 1}. ⏰ ${a.appointmentTime} — ${a.patientName}${a.reason ? ' (' + a.reason + ')' : ''}`), '', `Total: ${apptData.length} appointment(s)`];
+          await engine.sendRawMessage?.(clinic, staff.phone, msgLines.join('\n')) || null;
+        }
+
+        // Send Email summary
+        if (staff.email && (config.notifyChannel === 'email' || config.notifyChannel === 'both')) {
+          const emailTpl = emailSvc.dailySummaryEmail({ clinicName: clinic.name, staffName: staff.username, appointments: apptData, date: today, staffEmail: staff.email });
+          await emailSvc.sendEmail(emailTpl);
+        }
+      }
+    }
+  } catch (err) { console.error('[scheduler] Daily summary error:', err.message); }
+};
+
 // ── Job 3: Review requests (2h after appointment completed) ─────────────
 const runReviewRequests = async () => {
   try {
@@ -193,16 +272,23 @@ const startScheduler = () => {
   if (schedulerStarted) return;
   schedulerStarted = true;
 
-  // Every 30 minutes
+  // Every 30 minutes — reminders, followups, reviews, payments
   cron.schedule('*/30 * * * *', async () => {
     console.log('[scheduler] Running at', new Date().toLocaleTimeString());
     await runAppointmentReminders();
+    await runTwoHourReminders();
     await runFollowupReminders();
     await runReviewRequests();
     await runPaymentReminders();
   });
 
-  console.log('[scheduler] Started — appointment, followup, review & payment reminders active');
+  // Daily at 8:00 AM — morning summary to staff
+  cron.schedule('0 8 * * *', async () => {
+    console.log('[scheduler] Running daily summary at 8:00 AM');
+    await runDailySummary();
+  });
+
+  console.log('[scheduler] Started — appointment, followup, review, payment & daily summary jobs active');
 };
 
-module.exports = { startScheduler, runAppointmentReminders, runFollowupReminders, runReviewRequests };
+module.exports = { startScheduler, runAppointmentReminders, runFollowupReminders, runReviewRequests, runDailySummary };

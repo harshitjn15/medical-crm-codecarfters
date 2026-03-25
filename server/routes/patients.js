@@ -3,6 +3,7 @@ const router = express.Router();
 const { Patient } = require('../models');
 const { verifyToken } = require('../middleware/auth');
 const { resolveTenant } = require('../middleware/tenantMiddleware');
+const { requireRole } = require('../middleware/requireRole');
 
 router.use(verifyToken, resolveTenant);
 
@@ -11,7 +12,8 @@ router.get('/', async (req, res) => {
     const { search = '', page = 1, limit = 20 } = req.query;
     const q = { clinicId: req.clinicId };
     if (search) {
-      const re = new RegExp(search, 'i');
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp(escaped, 'i');
       q.$or = [{ name: re }, { phone: re }, { email: re }];
     }
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -20,7 +22,7 @@ router.get('/', async (req, res) => {
       Patient.countDocuments(q),
     ]);
     res.json({ patients: docs.map(d => d.toJSON()), total });
-  } catch (err) { console.error('[patients]', err.message); res.status(500).json({ error: err.message || 'Failed' }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to fetch patients' }); }
 });
 
 router.get('/:id', async (req, res) => {
@@ -28,7 +30,7 @@ router.get('/:id', async (req, res) => {
     const p = await Patient.findOne({ _id: req.params.id, clinicId: req.clinicId });
     if (!p) return res.status(404).json({ error: 'Not found' });
     res.json(p.toJSON());
-  } catch (err) { console.error('[patients]', err.message); res.status(500).json({ error: err.message || 'Failed' }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to fetch patient' }); }
 });
 
 router.post('/', async (req, res) => {
@@ -37,7 +39,7 @@ router.post('/', async (req, res) => {
     if (!name) return res.status(400).json({ error: 'Name required' });
     const p = await Patient.create({ clinicId: req.clinicId, name, phone, email, dateOfBirth, gender, address, bloodGroup, allergies, medicalHistory });
     res.status(201).json({ message: 'Patient created', id: p.id });
-  } catch (err) { console.error('[patients]', err.message); res.status(500).json({ error: err.message || 'Failed' }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to create patient' }); }
 });
 
 router.put('/:id', async (req, res) => {
@@ -50,15 +52,15 @@ router.put('/:id', async (req, res) => {
     );
     if (!p) return res.status(404).json({ error: 'Not found' });
     res.json({ message: 'Updated', id: p.id });
-  } catch (err) { console.error('[patients]', err.message); res.status(500).json({ error: err.message || 'Failed' }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to update patient' }); }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireRole('admin', 'super_admin'), async (req, res) => {
   try {
     const r = await Patient.findOneAndDelete({ _id: req.params.id, clinicId: req.clinicId });
     if (!r) return res.status(404).json({ error: 'Not found' });
     res.json({ message: 'Deleted' });
-  } catch (err) { console.error('[patients]', err.message); res.status(500).json({ error: err.message || 'Failed' }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to delete patient' }); }
 });
 
 module.exports = router;

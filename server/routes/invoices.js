@@ -3,6 +3,7 @@ const router = express.Router();
 const { Invoice } = require('../models');
 const { verifyToken } = require('../middleware/auth');
 const { resolveTenant } = require('../middleware/tenantMiddleware');
+const { requireRole } = require('../middleware/requireRole');
 
 router.use(verifyToken, resolveTenant);
 
@@ -85,7 +86,7 @@ router.get('/', async (req, res) => {
     const stats = agg[0] || { collected: 0, pending: 0, paid_count: 0, pending_count: 0 };
 
     res.json({ invoices: docs.map(toClient), total, stats });
-  } catch (err) { console.error('[invoices]', err.message); res.status(500).json({ error: err.message || 'Failed' }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to fetch invoices' }); }
 });
 
 router.get('/:id/print', async (req, res) => {
@@ -105,7 +106,7 @@ router.get('/:id/print', async (req, res) => {
       clinic_tagline: c?.tagline,
       currency:       c?.currency || 'INR',
     });
-  } catch (err) { console.error('[invoices]', err.message); res.status(500).json({ error: err.message || 'Failed' }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to fetch invoice' }); }
 });
 
 router.get('/:id', async (req, res) => {
@@ -113,7 +114,7 @@ router.get('/:id', async (req, res) => {
     const inv = await Invoice.findOne({ _id: req.params.id, clinicId: req.clinicId }).populate('patientId', 'name phone');
     if (!inv) return res.status(404).json({ error: 'Not found' });
     res.json(toClient(inv));
-  } catch (err) { console.error('[invoices]', err.message); res.status(500).json({ error: err.message || 'Failed' }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to fetch invoice' }); }
 });
 
 router.post('/', async (req, res) => {
@@ -166,8 +167,7 @@ router.post('/', async (req, res) => {
       invoice_number: invoiceNumber, subtotal, taxAmount, total,
     });
   } catch (err) {
-    console.error('[invoices POST]', err.message, err.errors || '');
-    res.status(500).json({ error: err.message || 'Failed to create invoice' });
+    res.status(500).json({ error: 'Failed to create invoice' });
   }
 });
 
@@ -181,7 +181,7 @@ router.put('/:id/status', async (req, res) => {
     const inv = await Invoice.findOneAndUpdate({ _id: req.params.id, clinicId: req.clinicId }, { $set: update }, { new: true });
     if (!inv) return res.status(404).json({ error: 'Not found' });
     res.json({ message: `Invoice ${status}`, id: inv.id });
-  } catch (err) { console.error('[invoices]', err.message); res.status(500).json({ error: err.message || 'Failed' }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to update invoice status' }); }
 });
 
 router.put('/:id', async (req, res) => {
@@ -216,19 +216,18 @@ router.put('/:id', async (req, res) => {
     await inv.save();
     res.json({ message: 'Updated', id: inv.id });
   } catch (err) {
-    console.error('[invoices PUT]', err.message, err.errors || '');
-    res.status(500).json({ error: err.message || 'Failed to update invoice' });
+    res.status(500).json({ error: 'Failed to update invoice' });
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireRole('admin', 'super_admin'), async (req, res) => {
   try {
     const inv = await Invoice.findOne({ _id: req.params.id, clinicId: req.clinicId });
     if (!inv) return res.status(404).json({ error: 'Not found' });
     if (inv.status === 'paid') return res.status(400).json({ error: 'Cannot delete paid invoice' });
     await inv.deleteOne();
     res.json({ message: 'Deleted' });
-  } catch (err) { console.error('[invoices]', err.message); res.status(500).json({ error: err.message || 'Failed' }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to delete invoice' }); }
 });
 
 module.exports = router;

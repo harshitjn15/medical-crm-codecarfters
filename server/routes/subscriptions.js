@@ -1,21 +1,18 @@
 const express = require('express');
 const router  = express.Router();
-const { Subscription, Clinic } = require('../models');
+const { Subscription, Clinic, PLAN_FEATURES } = require('../models');
 const { verifyToken }   = require('../middleware/auth');
 const { resolveTenant } = require('../middleware/tenantMiddleware');
+const { requireRole }   = require('../middleware/requireRole');
 
-// Super admin only
-const superOnly = (req, res, next) =>
-  req.userRole === 'super_admin' ? next() : res.status(403).json({ error: 'Super admin only' });
-
-const auth = [verifyToken, resolveTenant, superOnly];
+const auth = [verifyToken, resolveTenant, requireRole('super_admin')];
 
 // GET /api/subscriptions — list all
 router.get('/', ...auth, async (req, res) => {
   try {
     const subs = await Subscription.find().populate('clinicId', 'name slug isActive specialty').sort({ createdAt: -1 });
     res.json(subs.map(s => s.toJSON()));
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to fetch subscriptions' }); }
 });
 
 // GET /api/subscriptions/:clinicId
@@ -23,7 +20,7 @@ router.get('/:clinicId', ...auth, async (req, res) => {
   try {
     const sub = await Subscription.findOne({ clinicId: req.params.clinicId });
     res.json(sub ? sub.toJSON() : { plan: 'basic', status: 'trial' });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to fetch subscription' }); }
 });
 
 // POST /api/subscriptions — create or update subscription for a clinic
@@ -55,7 +52,7 @@ router.post('/', ...auth, async (req, res) => {
     await Clinic.findByIdAndUpdate(clinic_id, { $set: { plan } });
 
     res.status(201).json({ message: 'Subscription set', id: sub.id, plan, endDate });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to update subscription' }); }
 });
 
 // PUT /api/subscriptions/:id/cancel
@@ -64,14 +61,13 @@ router.put('/:id/cancel', ...auth, async (req, res) => {
     const sub = await Subscription.findByIdAndUpdate(req.params.id, { $set: { status: 'cancelled' } }, { new: true });
     if (!sub) return res.status(404).json({ error: 'Not found' });
     res.json({ message: 'Cancelled', id: sub.id });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to cancel subscription' }); }
 });
 
 // GET /api/subscriptions/me/status — clinic gets their own plan
 router.get('/me/status', verifyToken, resolveTenant, async (req, res) => {
   try {
     const sub = await Subscription.findOne({ clinicId: req.clinicId });
-    const { PLAN_FEATURES } = require('../models/index');
     const plan = sub?.plan || req.clinic?.plan || 'basic';
     res.json({
       plan,
@@ -80,7 +76,7 @@ router.get('/me/status', verifyToken, resolveTenant, async (req, res) => {
       features:    PLAN_FEATURES[plan] || PLAN_FEATURES.basic,
       prices:      { basic: 9999, pro: 16999, enterprise: 24999 },
     });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to fetch subscription status' }); }
 });
 
 module.exports = router;

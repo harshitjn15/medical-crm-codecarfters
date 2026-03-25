@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { VitalSigns } = require('../models');
 const { verifyToken } = require('../middleware/auth');
+const { requireRole } = require('../middleware/requireRole');
 const { resolveTenant } = require('../middleware/tenantMiddleware');
 
 router.use(verifyToken, resolveTenant);
@@ -46,7 +47,7 @@ router.post('/', async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireRole('admin', 'super_admin'), async (req, res) => {
   try {
     await VitalSigns.findOneAndDelete({ _id: req.params.id, clinicId: req.clinicId });
     res.json({ message: 'Deleted' });

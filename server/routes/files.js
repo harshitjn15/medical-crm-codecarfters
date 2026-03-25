@@ -3,6 +3,7 @@ const router = express.Router();
 const { PatientFile } = require('../models');
 const { verifyToken } = require('../middleware/auth');
 const { resolveTenant } = require('../middleware/tenantMiddleware');
+const { requireRole } = require('../middleware/requireRole');
 
 router.use(verifyToken, resolveTenant);
 
@@ -16,7 +17,7 @@ router.get('/', async (req, res) => {
       .select('-data') // exclude base64 from list — fetch individually on download
       .sort({ createdAt: -1 });
     res.json({ files: files.map(f => f.toJSON()) });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to fetch files' }); }
 });
 
 // Upload — expects JSON body: { patient_id, filename, mimetype, data (base64), category, notes }
@@ -40,7 +41,7 @@ router.post('/upload', async (req, res) => {
       category: category || 'other', notes,
     });
     res.status(201).json({ message: 'Uploaded', id: f.id, originalName: filename, size: sizeBytes });
-  } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to upload file' }); }
 });
 
 // Download / view — returns base64 data URI
@@ -49,14 +50,14 @@ router.get('/:id', async (req, res) => {
     const f = await PatientFile.findOne({ _id: req.params.id, clinicId: req.clinicId });
     if (!f) return res.status(404).json({ error: 'Not found' });
     res.json({ ...f.toJSON() }); // includes data
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to fetch file' }); }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireRole('admin', 'super_admin'), async (req, res) => {
   try {
     await PatientFile.findOneAndDelete({ _id: req.params.id, clinicId: req.clinicId });
     res.json({ message: 'Deleted' });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to delete file' }); }
 });
 
 module.exports = router;

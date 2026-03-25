@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { TreatmentPlan } = require('../models');
 const { verifyToken } = require('../middleware/auth');
+const { requireRole } = require('../middleware/requireRole');
 const { resolveTenant } = require('../middleware/tenantMiddleware');
 
 router.use(verifyToken, resolveTenant);
@@ -83,7 +84,7 @@ router.put('/:id/items/:index', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireRole('admin', 'super_admin'), async (req, res) => {
   try {
     await TreatmentPlan.findOneAndDelete({ _id: req.params.id, clinicId: req.clinicId });
     res.json({ message: 'Deleted' });

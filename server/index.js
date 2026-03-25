@@ -1,20 +1,59 @@
 require('dotenv').config();
-const express = require('express');
-const cors    = require('cors');
-const path    = require('path');
-const connectDB = require('./database/connect');
+const express        = require('express');
+const cors           = require('cors');
+const path           = require('path');
+const helmet         = require('helmet');
+const mongoSanitize  = require('express-mongo-sanitize');
+const rateLimit      = require('express-rate-limit');
+const connectDB      = require('./database/connect');
+const errorHandler   = require('./middleware/errorHandler');
+const logger         = require('./utils/logger');
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
 const isProd = process.env.NODE_ENV === 'production';
 
+// ── Security: Fail fast if critical env vars are missing ───────────────
+if (!process.env.JWT_SECRET) {
+  logger.error('FATAL: JWT_SECRET environment variable is not set. Exiting.');
+  process.exit(1);
+}
+
 connectDB();
+
+// ── Security Headers ──────────────────────────────────────────────────
+app.use(helmet());
 
 // CORS — in production the client is served from the same origin so no CORS needed
 // In dev allow localhost:3000
 app.use(cors({ origin: ['http://localhost:3000','https://medical-crm-codecrafters.netlify.app'], credentials: true }));
 
-app.use(express.json());
+// ── Body parsing with size limit (prevents DoS via massive payloads) ──
+app.use(express.json({ limit: '2mb' }));
+
+// ── NoSQL Injection Prevention ────────────────────────────────────────
+app.use(mongoSanitize());
+
+// ── Rate Limiters ─────────────────────────────────────────────────────
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later' },
+});
+
+const publicLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 50,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later' },
+});
+
+app.use('/api/auth', authLimiter);
+app.use('/api/appointments/available-slots', publicLimiter);
+app.use('/api/appointments/book', publicLimiter);
 
 // ── API Routes ─────────────────────────────────────────────────────────
 app.use('/api/auth',           require('./routes/auth'));
@@ -49,14 +88,17 @@ if (isProd) {
   app.get('*', (req, res) => res.sendFile(path.join(build, 'index.html')));
 }
 
+// ── Centralized Error Handler (must be last middleware) ────────────────
+app.use(errorHandler);
+
 app.listen(PORT, async () => {
-  console.log(`Server on :${PORT} [${process.env.NODE_ENV || 'dev'}]`);
+  logger.info(`Server on :${PORT} [${process.env.NODE_ENV || 'dev'}]`);
 
   // Start bot scheduler after server is ready
   try {
     const { startScheduler } = require('./bot/scheduler');
     startScheduler();
   } catch (err) {
-    console.error('[scheduler] Failed to start:', err.message);
+    logger.error('[scheduler] Failed to start:', { error: err.message });
   }
 });

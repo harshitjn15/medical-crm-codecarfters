@@ -55,7 +55,7 @@ router.get('/status', ...auth, attachPlan, async (req, res) => {
       stats: statMap,
       totalSent: Object.values(statMap).reduce((a, b) => a + b, 0),
     });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to fetch bot status' }); }
 });
 
 // ── PUT /api/bot/config ─────────────────────────────────────────────────
@@ -81,7 +81,7 @@ router.put('/config', ...auth, requirePlan('botEnabled'), async (req, res) => {
       { upsert: true, new: true }
     );
     res.json({ message: 'Bot config saved', id: config.id });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to save bot config' }); }
 });
 
 // ── GET /api/bot/messages ───────────────────────────────────────────────
@@ -97,7 +97,7 @@ router.get('/messages', ...auth, requirePlan('botEnabled'), async (req, res) => 
       BotMessage.countDocuments(q),
     ]);
     res.json({ messages: docs.map(d => d.toJSON()), total });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to fetch messages' }); }
 });
 
 // ── GET /api/bot/inbox (inbound replies from patients) ──────────────────
@@ -110,7 +110,7 @@ router.get('/inbox', ...auth, requirePlan('botEnabled'), async (req, res) => {
       BotMessage.countDocuments({ clinicId: req.clinicId, direction: 'inbound' }),
     ]);
     res.json({ messages: docs.map(d => d.toJSON()), total });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to fetch inbox' }); }
 });
 
 // ── POST /api/bot/send — manual send from dashboard ────────────────────
@@ -125,7 +125,7 @@ router.post('/send', ...auth, requirePlan('botEnabled'), async (req, res) => {
     });
 
     res.json({ message: 'Sent', ...result });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to send message' }); }
 });
 
 // ── POST /api/bot/send-location ─────────────────────────────────────────
@@ -136,7 +136,7 @@ router.post('/send-location', ...auth, requirePlan('botEnabled'), async (req, re
     const clinic = await Clinic.findById(req.clinicId);
     const result = await engine.sendLocationShare(clinic, phone, patient_name, patient_id);
     res.json(result);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to send location' }); }
 });
 
 // ── POST /api/bot/send-review ───────────────────────────────────────────
@@ -149,7 +149,7 @@ router.post('/send-review', ...auth, requirePlan('botEnabled'), async (req, res)
     const appt    = { _id: appointment_id };
     const result  = await engine.sendReviewRequest(clinic, patient, appt);
     res.json(result);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { res.status(500).json({ error: 'Failed to send review request' }); }
 });
 
 // ── POST /api/bot/webhook — receive inbound from WhatsApp Cloud API ──────
@@ -183,7 +183,7 @@ router.get('/webhook', (req, res) => {
   const mode      = req.query['hub.mode'];
   const token     = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
-  if (mode === 'subscribe' && token === (process.env.WEBHOOK_VERIFY_TOKEN || 'medicalcrm')) {
+  if (mode === 'subscribe' && process.env.WEBHOOK_VERIFY_TOKEN && token === process.env.WEBHOOK_VERIFY_TOKEN) {
     res.status(200).send(challenge);
   } else {
     res.sendStatus(403);

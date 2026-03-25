@@ -1,0 +1,156 @@
+/* AppointmentCalendar.css */
+
+.cal-wrapper {
+  position: relative;
+  padding: 16px 0;
+}
+
+/* Loading bar */
+.cal-loading-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6 0%, #7c3aed 50%, #3b82f6 100%);
+  background-size: 200% 100%;
+  animation: calLoadingSlide 1.2s linear infinite;
+  border-radius: 2px;
+  z-index: 100;
+}
+@keyframes calLoadingSlide {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Toast */
+.cal-toast {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  background: #1e293b;
+  color: #f1f5f9;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  z-index: 9999;
+  animation: toastIn 0.3s ease;
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Overlay during reschedule */
+.cal-reschedule-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: #3b82f6;
+  z-index: 50;
+  border-radius: 12px;
+  backdrop-filter: blur(2px);
+}
+
+/* Legend */
+.cal-legend {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.cal-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.cal-legend-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* Override rbc defaults */
+.rbc-calendar {
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-card, #fff);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.rbc-header {
+  background: var(--bg-main, #f8fafc);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-muted, #64748b);
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--border-color, #e2e8f0) !important;
+}
+.rbc-toolbar {
+  padding: 12px 16px;
+  background: var(--bg-card, #fff);
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+.rbc-toolbar button {
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 6px;
+  background: var(--bg-card, #fff);
+  color: var(--text-main, #1e293b);
+  font-size: 13px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.rbc-toolbar button:hover { background: var(--bg-main, #f8fafc); }
+.rbc-toolbar button.rbc-active {
+  background: #3b82f6 !important;
+  color: #fff !important;
+  border-color: #2563eb !important;
+}
+.rbc-today { background: #eff6ff !important; }
+.rbc-off-range-bg { background: var(--bg-main, #f8fafc) !important; }
+.rbc-event { border-radius: 5px !important; }
+.rbc-event:focus { outline: none; }
+.rbc-slot-selecting .rbc-day-slot { cursor: default; }
+
+/* Side panel */
+.cal-side-panel {
+  position: fixed;
+  top: 0; right: 0;
+  width: 320px;
+  height: 100vh;
+  background: var(--bg-card, #fff);
+  border-left: 1px solid var(--border-color, #e2e8f0);
+  box-shadow: -8px 0 32px rgba(0,0,0,0.12);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  animation: panelSlide 0.25s ease;
+}
+@keyframes panelSlide {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+.cal-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  background: linear-gradient(135deg, #3b82f6, #7c3aed);
+  color: #fff;
+}
+.cal-panel-header h3 { margin: 0; font-size: 16px; }
+.cal-panel-header .btn-icon { color: rgba(255,255,255,0.8); background: none; border: none; font-size: 16px; cursor: pointer; }
+.cal-panel-body { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.cal-panel-name { font-size: 20px; font-weight: 700; color: var(--text-main, #1e293b); }
+.cal-panel-meta { display: flex; gap: 12px; flex-wrap: wrap; }
+.cal-panel-meta span { font-size: 13px; color: var(--text-muted, #64748b); background: var(--bg-main, #f8fafc); padding: 4px 10px; border-radius: 20px; }
+.cal-panel-row { font-size: 14px; color: var(--text-muted, #64748b); display: flex; gap: 8px; align-items: center; }
+.cal-panel-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }

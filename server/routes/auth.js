@@ -6,6 +6,9 @@ const { User, Clinic, OtpCode } = require('../models');
 const { verifyToken } = require('../middleware/auth');
 const { resolveTenant } = require('../middleware/tenantMiddleware');
 
+// ── Helper: escape regex special characters ───────────────────────────
+const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -18,7 +21,7 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign(
       { id: user.id, username: user.username, role: user.role },
-      process.env.JWT_SECRET || 'default-secret',
+      process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
 
@@ -62,8 +65,9 @@ router.post('/otp/generate', async (req, res) => {
     const digits = phone.replace(/\D/g, '');
     if (digits.length < 10) return res.status(400).json({ error: 'Invalid phone number' });
 
-    // Find user by phone
-    const user = await User.findOne({ phone: { $regex: digits.slice(-10) } });
+    // Use escaped regex + exact 10-digit suffix match
+    const escapedDigits = escapeRegex(digits.slice(-10));
+    const user = await User.findOne({ phone: { $regex: `${escapedDigits}$` } });
     if (!user) return res.status(404).json({ error: 'No account found with this phone number' });
 
     // Invalidate previous OTPs
@@ -75,13 +79,20 @@ router.post('/otp/generate', async (req, res) => {
 
     await OtpCode.create({ phone: digits, clinicId: user.clinicId, code, expiresAt });
 
-    // Build WhatsApp link for delivery
+    // In production, OTP should be delivered server-side only (not exposed in response)
+    const isProd = process.env.NODE_ENV === 'production';
     const cleaned = digits.length === 10 ? `91${digits}` : digits;
-    const message = `Your Medical CRM login OTP is: *${code}*\n\nValid for 10 minutes. Do not share with anyone.`;
-    const waLink = `https://wa.me/${cleaned}?text=${encodeURIComponent(message)}`;
 
-    res.json({ message: 'OTP generated', waLink, phone: digits, expiresIn: 600 });
-  } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
+    if (isProd) {
+      // In production, only confirm OTP was sent — never leak the code
+      res.json({ message: 'OTP sent to your WhatsApp', phone: digits, expiresIn: 600 });
+    } else {
+      // Dev mode: return wa.me link for manual testing
+      const message = `Your Medical CRM login OTP is: *${code}*\n\nValid for 10 minutes. Do not share with anyone.`;
+      const waLink = `https://wa.me/${cleaned}?text=${encodeURIComponent(message)}`;
+      res.json({ message: 'OTP generated', waLink, phone: digits, expiresIn: 600 });
+    }
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Failed to generate OTP' }); }
 });
 
 // Verify OTP and return token
@@ -98,15 +109,16 @@ router.post('/otp/verify', async (req, res) => {
     otp.used = true;
     await otp.save();
 
-    const user = await User.findOne({ phone: { $regex: digits.slice(-10) } });
+    const escapedDigits = escapeRegex(digits.slice(-10));
+    const user = await User.findOne({ phone: { $regex: `${escapedDigits}$` } });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     const clinic = await Clinic.findById(user.clinicId);
     if (!clinic || clinic.isActive === false) return res.status(403).json({ error: 'Clinic inactive' });
 
-    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, process.env.JWT_SECRET || 'default-secret', { expiresIn: '7d' });
+    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, user: { id: user.id, username: user.username, email: user.email, role: user.role, clinic_id: clinic.id, clinic_name: clinic.name, clinic_slug: clinic.slug, specialty: clinic.specialty || 'general' } });
-  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+  } catch (err) { res.status(500).json({ error: 'OTP verification failed' }); }
 });
 
 module.exports = router;

@@ -1,9 +1,13 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const connectDB = async () => {
   try {
     const uri = process.env.MONGO_URI || 'mongodb://localhost:27017/medical_crm';
+    if (!process.env.MONGO_URI) {
+      console.warn('WARNING: MONGO_URI is not set. Using local MongoDB at localhost:27017');
+    }
     await mongoose.connect(uri);
     console.log(`MongoDB connected: ${mongoose.connection.host}`);
     await seedDefaults();
@@ -37,12 +41,18 @@ const seedDefaults = async () => {
 
   const adminExists = await User.findOne({ username: 'admin' });
   if (!adminExists) {
+    const generatedPassword = crypto.randomBytes(12).toString('base64url').slice(0, 16);
     await User.create({
       clinicId: clinic._id, username: 'admin',
-      password: bcrypt.hashSync('admin123', 10),
+      password: bcrypt.hashSync(generatedPassword, 10),
       email: 'admin@myclinic.com', role: 'super_admin',
     });
-    console.log('Default admin created: username=admin password=admin123');
+    console.log('╔════════════════════════════════════════════════════╗');
+    console.log('║  Default admin created                             ║');
+    console.log(`║  Username: admin                                   ║`);
+    console.log(`║  Password: ${generatedPassword.padEnd(40)}║`);
+    console.log('║  ⚠ Change this password immediately!               ║');
+    console.log('╚════════════════════════════════════════════════════╝');
   }
 
   const wsExists = await ClinicWebsite.findOne({ clinicId: clinic._id });
@@ -57,3 +67,4 @@ const seedDefaults = async () => {
 };
 
 module.exports = connectDB;
+

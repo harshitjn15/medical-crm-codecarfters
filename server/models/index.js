@@ -382,6 +382,13 @@ const BotConfigSchema = new mongoose.Schema({
   tplLocation:      String,
   tplWelcome:       String,
   tplPayment:       String,
+
+  // ── Extended notification settings (Feature 2) ────────────────────────
+  emailNotifyEnabled:     { type: Boolean, default: false },
+  reminderTwoHoursBefore: { type: Boolean, default: false },
+  confirmOnBooking:       { type: Boolean, default: false },
+  dailySummaryEnabled:    { type: Boolean, default: true },
+  notifyChannel:          { type: String, enum: ['whatsapp', 'email', 'both'], default: 'whatsapp' },
 }, { timestamps: true });
 
 // ── BotMessage ─────────────────────────────────────────────────────────
