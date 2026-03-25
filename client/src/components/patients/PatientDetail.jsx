@@ -65,7 +65,7 @@ export default function PatientDetail() {
     <div className="page">
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button className="btn btn-secondary btn-sm" onClick={() => navigate('/admin/patients')}>← Back</button>
+          <button className="btn btn-secondary btn-sm" onClick={() => navigate(-1)}>← Back</button>
           <div className="page-header-left">
             <h1>{patient.name}</h1>
             <p>Patient · Added {patient.createdAt?.split('T')[0]}</p>

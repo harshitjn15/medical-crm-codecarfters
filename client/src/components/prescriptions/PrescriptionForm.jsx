@@ -54,7 +54,7 @@ export default function PrescriptionForm() {
     <div className="page">
       <div className="page-header">
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <button className="btn btn-secondary btn-sm" onClick={() => navigate('/admin/prescriptions')}>← Back</button>
+          <button className="btn btn-secondary btn-sm" onClick={() => navigate(-1)}>← Back</button>
           <h1>{isEdit ? 'Edit Prescription' : 'New Prescription'}</h1>
         </div>
       </div>
@@ -93,7 +93,7 @@ export default function PrescriptionForm() {
       </div>
       <div style={{ marginTop:20, display:'flex', gap:12 }}>
         <button className="btn btn-primary" onClick={handleSubmit} disabled={saving}>{saving?'Saving…':isEdit?'Update':'Create Prescription'}</button>
-        <button className="btn btn-secondary" onClick={() => navigate('/admin/prescriptions')}>Cancel</button>
+        <button className="btn btn-secondary" onClick={() => navigate(-1)}>Cancel</button>
       </div>
     </div>
   );

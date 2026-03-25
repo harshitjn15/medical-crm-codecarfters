@@ -33,7 +33,7 @@ export default function InvoiceForm() {
     <div className="page">
       <div className="page-header">
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <button className="btn btn-secondary btn-sm" onClick={()=>navigate('/admin/invoices')}>← Back</button>
+          <button className="btn btn-secondary btn-sm" onClick={()=>navigate(-1)}>← Back</button>
           <h1>{isEdit?'Edit Invoice':'New Invoice'}</h1>
         </div>
       </div>
@@ -91,7 +91,7 @@ export default function InvoiceForm() {
               </select>
             </div>
             <button className="btn btn-primary" style={{ width:'100%', justifyContent:'center' }} onClick={handleSubmit} disabled={saving}>{saving?'Saving…':isEdit?'Update Invoice':'Create Invoice'}</button>
-            <button className="btn btn-secondary" style={{ width:'100%', justifyContent:'center', marginTop:8 }} onClick={()=>navigate('/admin/invoices')}>Cancel</button>
+            <button className="btn btn-secondary" style={{ width:'100%', justifyContent:'center', marginTop:8 }} onClick={()=>navigate(-1)}>Cancel</button>
           </div>
         </div>
       </div>

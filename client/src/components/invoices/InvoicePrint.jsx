@@ -55,7 +55,7 @@ export default function InvoicePrint() {
 
       {/* ── Toolbar (hidden on print) ── */}
       <div className="ip-toolbar no-print">
-        <button className="btn btn-secondary" onClick={() => navigate('/admin/invoices')}>← Back</button>
+        <button className="btn btn-secondary" onClick={() => navigate(-1)}>← Back</button>
         <div style={{ display: 'flex', gap: 8 }}>
           {invoice.status !== 'paid' && invoice.status !== 'cancelled' && (
             <button className="btn btn-secondary" onClick={() => navigate(`/admin/invoices/${id}/edit`)}>✏️ Edit</button>

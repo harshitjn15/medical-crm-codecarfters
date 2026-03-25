@@ -263,6 +263,7 @@
 [data-layout="minimal"] .ip-total-row td { background: #f0f0f0 !important; }
 
 @media print {
-  [data-layout="modern"] .ip-header { background: var(--tmpl-color, #0f4c75) !important; -webkit-print-color-adjust: exact !important; }
+  [data-layout="modern"] .ip-header { background: var(--tmpl-color, #0f4c75) !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   [data-layout="minimal"] .ip-items thead tr { background: #000 !important; }
 }
+@page { margin: 0; }
