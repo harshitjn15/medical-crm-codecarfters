@@ -1,9 +1,15 @@
 const express  = require('express');
 const router   = express.Router();
 const { BotConfig, BotMessage, Clinic, Patient, Appointment, Followup, Invoice, Subscription } = require('../models');
-const { PLAN_FEATURES } = require('../models/index');
 const { verifyToken } = require('../middleware/auth');
 const { resolveTenant } = require('../middleware/tenantMiddleware');
+
+// Define PLAN_FEATURES for release/dev branch compatibility
+const PLAN_FEATURES = {
+  basic: { patients: true, appointments: true, prescriptions: true },
+  pro: { patients: true, appointments: true, prescriptions: true, botEnabled: true, websiteEnabled: true },
+  enterprise: { patients: true, appointments: true, prescriptions: true, botEnabled: true, websiteEnabled: true, multiLocation: true },
+};
 const { requirePlan, attachPlan } = require('../middleware/planGate');
 const engine = require('../bot/engine');
 

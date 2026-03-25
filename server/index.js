@@ -94,6 +94,32 @@ app.use(errorHandler);
 app.listen(PORT, async () => {
   logger.info(`Server on :${PORT} [${process.env.NODE_ENV || 'dev'}]`);
 
+  // Auto-init missing SaaS documents for existing and new clinics
+  try {
+    const { Clinic, Subscription, BotConfig } = require('./models');
+    const clinics = await Clinic.find();
+    let countSubs = 0, countBots = 0;
+    for (const c of clinics) {
+      const sub = await Subscription.findOne({ clinicId: c._id });
+      if (!sub) {
+        await Subscription.create({ clinicId: c._id, plan: c.plan || 'basic', status: 'trial', trialDays: 14 });
+        countSubs++;
+      }
+      const bot = await BotConfig.findOne({ clinicId: c._id });
+      if (!bot) {
+        // Find existing phone number if available
+        const botNumber = String(c.phone || '').replace(/\D/g, '') || undefined;
+        await BotConfig.create({ clinicId: c._id, botNumber });
+        countBots++;
+      }
+    }
+    if (countSubs > 0 || countBots > 0) {
+      logger.info(`[init] Generated ${countSubs} missing subscriptions and ${countBots} missing bot configs.`);
+    }
+  } catch (err) {
+    logger.error(`[init] Failed to init clinic features: ${err.message}`);
+  }
+
   // Start bot scheduler after server is ready
   try {
     const { startScheduler } = require('./bot/scheduler');
