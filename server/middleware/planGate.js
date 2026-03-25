@@ -1,6 +1,11 @@
 const { Subscription } = require('../models/index');
-const { PLAN_FEATURES } = require('../models/index');
 
+// Define PLAN_FEATURES for release/dev branch compatibility
+const PLAN_FEATURES = {
+  basic: { patients: true, appointments: true, prescriptions: true },
+  pro: { patients: true, appointments: true, prescriptions: true, botEnabled: true, websiteEnabled: true },
+  enterprise: { patients: true, appointments: true, prescriptions: true, botEnabled: true, websiteEnabled: true, multiLocation: true },
+};
 // ✅ Pricing (yearly as per your model)
 const PLAN_PRICES = {
   basic: 9999,
