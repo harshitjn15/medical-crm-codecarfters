@@ -66,4 +66,111 @@ router.get('/dashboard', async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Failed' }); }
 });
 
+router.get('/revenue-analytics', async (req, res) => {
+  try {
+    const { timeframe = 'monthly' } = req.query; // 'daily', 'weekly', 'monthly'
+    const cid = req.clinicId;
+    const now = new Date();
+    
+    // Determine the date range based on timeframe
+    let startDate;
+    let prevStartDate;
+    let prevEndDate;
+    if (timeframe === 'daily') {
+      // Current month
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      prevStartDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      prevEndDate = new Date(now.getFullYear(), now.getMonth(), 0);
+    } else if (timeframe === 'weekly') {
+      // Last 12 weeks
+      startDate = new Date(now);
+      startDate.setDate(now.getDate() - 84);
+      prevStartDate = new Date(startDate);
+      prevStartDate.setDate(startDate.getDate() - 84);
+      prevEndDate = new Date(startDate);
+    } else {
+      // Current Year
+      startDate = new Date(now.getFullYear(), 0, 1);
+      prevStartDate = new Date(now.getFullYear() - 1, 0, 1);
+      prevEndDate = new Date(now.getFullYear() - 1, 11, 31);
+    }
+
+    const startStr = startDate.toISOString().split('T')[0];
+    const prevStartStr = prevStartDate.toISOString().split('T')[0];
+    const prevEndStr = prevEndDate.toISOString().split('T')[0];
+
+    // Build the grouping format for the aggregation
+    let groupIdFormat;
+    if (timeframe === 'daily') {
+      groupIdFormat = { $substr: ['$issueDate', 0, 10] }; // YYYY-MM-DD
+    } else if (timeframe === 'weekly') {
+      // MongoDB week is a bit tricky, but we can group by ISO week using $isoWeek and $isoWeekYear
+      groupIdFormat = { $concat: [ { $toString: { $isoWeekYear: { $toDate: '$issueDate' } } }, '-W', { $toString: { $isoWeek: { $toDate: '$issueDate' } } } ] };
+    } else {
+      groupIdFormat = { $substr: ['$issueDate', 0, 7] }; // YYYY-MM
+    }
+
+    // 1. Chart Data (Current Period)
+    const chartData = await Invoice.aggregate([
+      { $match: { clinicId: cid, issueDate: { $gte: startStr }, status: 'paid' } },
+      { $group: { _id: groupIdFormat, revenue: { $sum: '$total' } } },
+      { $sort: { _id: 1 } }
+    ]);
+
+    // Format chart data
+    const formattedChartData = chartData.map(d => ({ date: d._id, revenue: d.revenue }));
+
+    // 2. High-Level KPIs (Current Period)
+    const currentKpis = await Invoice.aggregate([
+      { $match: { clinicId: cid, issueDate: { $gte: startStr } } },
+      { $group: {
+          _id: null,
+          totalRevenue: { $sum: { $cond: [{ $eq: ['$status', 'paid'] }, '$total', 0] } },
+          pendingRevenue: { $sum: { $cond: [{ $in: ['$status', ['sent', 'draft']] }, '$total', 0] } },
+          totalInvoices: { $sum: { $cond: [{ $eq: ['$status', 'paid'] }, 1, 0] } },
+      }}
+    ]);
+    const curr = currentKpis[0] || { totalRevenue: 0, pendingRevenue: 0, totalInvoices: 0 };
+    const avgInvoiceValue = curr.totalInvoices > 0 ? Math.round(curr.totalRevenue / curr.totalInvoices) : 0;
+
+    // 3. Previous Period KPIs for Growth
+    const prevKpis = await Invoice.aggregate([
+      { $match: { clinicId: cid, issueDate: { $gte: prevStartStr, $lte: prevEndStr } } },
+      { $group: { _id: null, totalRevenue: { $sum: { $cond: [{ $eq: ['$status', 'paid'] }, '$total', 0] } } } }
+    ]);
+    const prevRevenue = prevKpis[0]?.totalRevenue || 0;
+    
+    let growthNum = 0;
+    if (prevRevenue > 0) {
+      growthNum = ((curr.totalRevenue - prevRevenue) / prevRevenue) * 100;
+    } else if (curr.totalRevenue > 0) {
+      growthNum = 100;
+    }
+    const growth = parseFloat(growthNum.toFixed(1));
+
+    // 4. Min/Max insights
+    const revenues = formattedChartData.map(d => d.revenue);
+    const maxRev = revenues.length ? Math.max(...revenues) : 0;
+    const minRev = revenues.length ? Math.min(...revenues) : 0;
+    const topDay = formattedChartData.find(d => d.revenue === maxRev)?.date || null;
+    const bottomDay = formattedChartData.find(d => d.revenue === minRev)?.date || null;
+
+    res.json({
+      chartData: formattedChartData,
+      kpis: {
+        totalRevenue: curr.totalRevenue,
+        pendingRevenue: curr.pendingRevenue,
+        totalInvoices: curr.totalInvoices,
+        avgInvoiceValue,
+        growth,
+        prevRevenue,
+      },
+      insights: { topDay, bottomDay, maxRev, minRev }
+    });
+  } catch (err) {
+    console.error('[revenue-analytics]', err);
+    res.status(500).json({ error: 'Failed to generate analytics' });
+  }
+});
+
 module.exports = router;

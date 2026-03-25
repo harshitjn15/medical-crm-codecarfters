@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
+import RevenueChart from './RevenueChart';
 import './Dashboard.css';
 
 function greeting() { const h = new Date().getHours(); return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'; }
@@ -104,26 +105,9 @@ export default function Dashboard() {
             )}
           </div>
         </div>
-        <div className="card">
-          <div className="card-header"><h2>📈 Monthly Revenue</h2></div>
-          <div className="card-body">
-            {!monthly_revenue.length ? <div className="empty-state"><p>No revenue data yet</p></div> : (
-              <div className="revenue-bars">
-                {[...monthly_revenue].reverse().map(m => {
-                  const max = Math.max(...monthly_revenue.map(x => x.total));
-                  const pct = max > 0 ? (m.total / max) * 100 : 0;
-                  return (
-                    <div key={m.month} className="rev-bar-wrap">
-                      <div className="rev-bar-outer"><div className="rev-bar-fill" style={{ height: `${pct}%` }} /></div>
-                      <div className="rev-bar-label">{m.month?.slice(5)}</div>
-                      <div className="rev-bar-val">{fmt(m.total)}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
+        
+        <RevenueChart />
+        
       </div>
     </div>
   );
