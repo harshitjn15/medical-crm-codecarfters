@@ -156,12 +156,17 @@ export default function InvoicePrint() {
                 <td>Subtotal</td>
                 <td>{fmt(invoice.subtotal)}</td>
               </tr>
-              {invoice.discount > 0 && (
-                <tr className="ip-discount">
-                  <td>Discount</td>
-                  <td>− {fmt(invoice.discount)}</td>
-                </tr>
-              )}
+              {(() => {
+                const discountVal = invoice.discount || 0;
+                if (!discountVal) return null;
+                const discountAmt = invoice.discount_type === 'percent' ? (invoice.subtotal * discountVal) / 100 : discountVal;
+                return (
+                  <tr className="ip-discount">
+                    <td>Discount {invoice.discount_type === 'percent' ? `(${discountVal}%)` : ''}</td>
+                    <td>− {fmt(discountAmt)}</td>
+                  </tr>
+                );
+              })()}
               <tr>
                 <td>GST ({taxRate}%)</td>
                 <td>{fmt(taxAmount)}</td>

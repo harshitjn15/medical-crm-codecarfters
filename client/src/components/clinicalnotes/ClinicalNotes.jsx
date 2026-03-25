@@ -105,7 +105,7 @@ export default function ClinicalNotes({ patientId }) {
             </div>
           </div>
           <div className="card-body" style={{ padding: '12px 16px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
               {[
                 { field: 'subjective',  label: 'Subjective',  color: '#3b82f6' },
                 { field: 'objective',   label: 'Objective',   color: '#8b5cf6' },
@@ -114,7 +114,7 @@ export default function ClinicalNotes({ patientId }) {
               ].map(s => (n[s.field] ? (
                 <div key={s.field} style={{ borderLeft: `3px solid ${s.color}`, paddingLeft: 10 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: s.color, textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>{s.label}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{n[s.field]}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{n[s.field]}</div>
                 </div>
               ) : null))}
             </div>

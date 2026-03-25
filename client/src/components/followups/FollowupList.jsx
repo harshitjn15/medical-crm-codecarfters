@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import FollowupModal from './FollowupModal';
 import WhatsAppButton, { buildFollowupMessage } from '../whatsapp/WhatsAppButton';
@@ -44,7 +45,16 @@ export default function FollowupList() {
                 {!followups.length && <tr><td colSpan={6}><div className="empty-state"><div className="icon">🔔</div><p>No follow-ups found</p></div></td></tr>}
                 {followups.map(f => (
                   <tr key={f.id}>
-                    <td><strong>{f.patient_name}</strong><div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{f.patient_phone}</div></td>
+                    <td>
+                      {f.patient_id ? (
+                        <Link to={`/admin/patients/${f.patient_id}`} style={{ fontWeight: 600, color: 'inherit', textDecoration: 'none' }}>
+                          <strong>{f.patient_name}</strong>
+                        </Link>
+                      ) : (
+                        <strong>{f.patient_name}</strong>
+                      )}
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{f.patient_phone}</div>
+                    </td>
                     <td style={{ color: f.followup_date < today && f.status === 'pending' ? 'var(--danger)' : 'inherit', fontWeight: f.followup_date < today && f.status === 'pending' ? 600 : 400 }}>
                       {f.followup_date}{f.followup_date < today && f.status === 'pending' && <span style={{ fontSize: 11, marginLeft: 4, color: 'var(--danger)' }}> Overdue</span>}
                     </td>

@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
       VitalSigns.find(q).sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)).populate('patientId', 'name'),
       VitalSigns.countDocuments(q),
     ]);
-    res.json({ vitals: docs.map(d => ({ ...d.toJSON(), patient_name: d.patientId?.name })), total });
+    res.json({ vitals: docs.map(d => ({ ...d.toJSON(), id: d._id, patient_name: d.patientId?.name })), total });
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
 

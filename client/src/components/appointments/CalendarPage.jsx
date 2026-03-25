@@ -100,127 +100,7 @@ function WeekEvent({ event }) {
   );
 }
 
-/* ── Add Appointment Modal ──────────────────────────────────────────────── */
-function AddAppointmentModal({ onClose, onSaved, authFetch, prefillDate }) {
-  const [patients, setPatients] = useState([]);
-  const [form, setForm] = useState({
-    patient_name: '', patient_phone: '', patient_email: '',
-    appointment_date: prefillDate || getTodayStr(),
-    appointment_time: '09:00', reason: '',
-    existing_patient_id: '',
-  });
-  const [saving, setSaving] = useState(false);
-  const [error, setError]   = useState('');
-  const [mode, setMode]     = useState('new'); // 'new' | 'existing'
 
-  useEffect(() => {
-    authFetch('/api/patients?limit=200').then(r => r.json()).then(d => setPatients(d.patients || []));
-  }, []);
-
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-
-  const handleSave = async () => {
-    if (mode === 'existing' && !form.existing_patient_id) return setError('Select a patient');
-    if (!form.appointment_date || !form.appointment_time) return setError('Date and time required');
-    setSaving(true); setError('');
-
-    const patient = mode === 'existing'
-      ? patients.find(p => p.id === form.existing_patient_id)
-      : null;
-
-    const payload = {
-      patient_name:  patient?.name  || form.patient_name,
-      patient_phone: patient?.phone || form.patient_phone,
-      patient_email: patient?.email || form.patient_email,
-      appointment_date: form.appointment_date,
-      appointment_time: form.appointment_time,
-      reason: form.reason,
-      patient_id: patient?.id || undefined,
-    };
-
-    if (!payload.patient_name) { setError('Patient name required'); setSaving(false); return; }
-
-    const r = await authFetch('/api/appointments', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
-    const data = await r.json();
-    if (!r.ok) { setError(data.error || 'Failed to book appointment'); setSaving(false); return; }
-    setSaving(false);
-    onSaved();
-  };
-
-  return (
-    <div className="cp-modal-overlay" onClick={onClose}>
-      <div className="cp-modal" onClick={e => e.stopPropagation()}>
-        <div className="cp-modal-header">
-          <h2>Schedule a Visit</h2>
-          <button className="cp-modal-close" onClick={onClose}>✕</button>
-        </div>
-        <div className="cp-modal-body">
-          {/* Patient mode toggle */}
-          <div className="cp-mode-toggle">
-            <button className={mode === 'new' ? 'active' : ''} onClick={() => setMode('new')}>New Patient</button>
-            <button className={mode === 'existing' ? 'active' : ''} onClick={() => setMode('existing')}>Existing Patient</button>
-          </div>
-
-          {mode === 'existing' ? (
-            <div className="cp-form-group">
-              <label>Select Patient</label>
-              <select value={form.existing_patient_id} onChange={e => set('existing_patient_id', e.target.value)}>
-                <option value="">Choose patient…</option>
-                {patients.map(p => <option key={p.id} value={p.id}>{p.name} — {p.phone}</option>)}
-              </select>
-            </div>
-          ) : (
-            <>
-              <div className="cp-form-row">
-                <div className="cp-form-group">
-                  <label>Full Name *</label>
-                  <input value={form.patient_name} onChange={e => set('patient_name', e.target.value)} placeholder="Patient name" />
-                </div>
-                <div className="cp-form-group">
-                  <label>Phone</label>
-                  <input value={form.patient_phone} onChange={e => set('patient_phone', e.target.value)} placeholder="+91 99999 00000" />
-                </div>
-              </div>
-              <div className="cp-form-group">
-                <label>Email</label>
-                <input type="email" value={form.patient_email} onChange={e => set('patient_email', e.target.value)} placeholder="patient@email.com" />
-              </div>
-            </>
-          )}
-
-          <div className="cp-form-row">
-            <div className="cp-form-group">
-              <label>Date *</label>
-              <input type="date" value={form.appointment_date} onChange={e => set('appointment_date', e.target.value)} />
-            </div>
-            <div className="cp-form-group">
-              <label>Time *</label>
-              <select value={form.appointment_time} onChange={e => set('appointment_time', e.target.value)}>
-                {ALL_SLOTS.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div className="cp-form-group">
-            <label>Reason / Chief Complaint</label>
-            <input value={form.reason} onChange={e => set('reason', e.target.value)} placeholder="e.g. Regular checkup, tooth pain…" />
-          </div>
-
-          {error && <div className="cp-modal-error">{error}</div>}
-        </div>
-        <div className="cp-modal-footer">
-          <button className="cp-btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="cp-btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? 'Scheduling…' : 'Schedule Visit'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* ── Reschedule Modal ─────────────────────────────────────────────────── */
 function RescheduleModal({ onClose, onSaved, authFetch, conflictData }) {
@@ -301,6 +181,13 @@ export default function CalendarPage() {
   const [slotConflictEvent, setSlotConflictEvent] = useState(null);
   const [prefillDate, setPrefillDate]   = useState('');
 
+  const location = window.location;
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('new')) {
+      setShowAddModal(true);
+    }
+  }, [location.search]);
+
   // Filters
   const [filterStatus, setFilterStatus] = useState('all');
 
@@ -324,7 +211,7 @@ export default function CalendarPage() {
   }, [date, view, filterStatus, authFetch]);
 
   const fetchToday = useCallback(async () => {
-    const r = await authFetch(`/api/appointments?filter=today&limit=50`);
+    const r = await authFetch(`/api/appointments?date=${moment().format('YYYY-MM-DD')}&limit=50`);
     const d = await r.json();
     setTodayAppts(d.appointments || []);
   }, [authFetch]);
@@ -456,26 +343,24 @@ export default function CalendarPage() {
               <button
                 key={s}
                 className={`cp-filter-pill ${filterStatus === s ? 'active' : ''}`}
-                style={filterStatus === s && s !== 'all'
-                  ? { background: STATUS[s]?.bg, color: STATUS[s]?.color, borderColor: STATUS[s]?.border }
-                  : {}}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  ...(filterStatus === s && s !== 'all'
+                    ? { background: STATUS[s]?.bg, color: STATUS[s]?.color, borderColor: STATUS[s]?.border }
+                    : {})
+                }}
                 onClick={() => handleFilterStatus(s)}
               >
+                {s !== 'all' && (
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: STATUS[s].color, flexShrink: 0
+                  }} />
+                )}
                 {s === 'all' ? 'All' : STATUS[s].label}
               </button>
             ))}
           </div>
-        </div>
-
-        {/* Legend */}
-        <div className="cp-filter-section">
-          <div className="cp-filter-label">Status legend</div>
-          {Object.entries(STATUS).map(([k, v]) => (
-            <div key={k} className="cp-legend-row">
-              <span className="cp-legend-dot" style={{ background: v.color }} />
-              <span className="cp-legend-label">{v.label}</span>
-            </div>
-          ))}
         </div>
       </aside>
 
@@ -584,14 +469,18 @@ export default function CalendarPage() {
       )}
 
       {/* Add appointment modal */}
-      {showAddModal && (
-        <AddAppointmentModal
-          authFetch={authFetch}
-          prefillDate={prefillDate}
-          onClose={() => setShowAddModal(false)}
-          onSaved={() => { setShowAddModal(false); fetchEvents(date, view); fetchToday(); showToast('Appointment scheduled!'); }}
-        />
-      )}
+      {showAddModal && <AddAppointmentModal
+        authFetch={authFetch}
+        prefillDate={prefillDate}
+        allEvents={events}
+        onClose={() => { setShowAddModal(false); setPrefillDate(''); }}
+        onSaved={() => {
+          setShowAddModal(false);
+          setPrefillDate('');
+          showToast('Appointment booked');
+          fetchEvents(date, view); fetchToday();
+        }}
+      />}
 
       {/* Reschedule on Conflict modal */}
       {slotConflictEvent && (

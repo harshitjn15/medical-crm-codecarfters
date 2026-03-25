@@ -20,6 +20,7 @@ router.get('/', async (req, res) => {
     ]);
     const plans = docs.map(p => ({
       ...p.toJSON(),
+      id: p._id,
       patient_name:  p.patientId?.name,
       patient_phone: p.patientId?.phone,
     }));
@@ -31,7 +32,7 @@ router.get('/:id', async (req, res) => {
   try {
     const p = await TreatmentPlan.findOne({ _id: req.params.id, clinicId: req.clinicId }).populate('patientId', 'name phone');
     if (!p) return res.status(404).json({ error: 'Not found' });
-    res.json({ ...p.toJSON(), patient_name: p.patientId?.name, patient_phone: p.patientId?.phone });
+    res.json({ ...p.toJSON(), id: p._id, patient_name: p.patientId?.name, patient_phone: p.patientId?.phone });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

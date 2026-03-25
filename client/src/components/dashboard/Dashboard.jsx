@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import './Dashboard.css';
 
@@ -49,7 +49,18 @@ export default function Dashboard() {
             {!upcoming_appointments.length ? <div className="empty-state" style={{ padding: 24 }}><p>No upcoming appointments</p></div> : (
               <table><thead><tr><th>Patient</th><th>Date</th><th>Time</th><th>Reason</th></tr></thead>
                 <tbody>{upcoming_appointments.map(a => (
-                  <tr key={a.id}><td><strong>{a.patient_name}</strong></td><td>{a.appointment_date}</td><td>{a.appointment_time}</td><td style={{ color: 'var(--text-muted)' }}>{a.reason || '—'}</td></tr>
+                  <tr key={a.id}>
+                    <td>
+                      {a.patient_id ? (
+                        <Link to={`/admin/patients/${a.patient_id}`} style={{ fontWeight: 600, color: 'inherit', textDecoration: 'none' }}>
+                          <strong>{a.patient_name}</strong>
+                        </Link>
+                      ) : (
+                        <strong>{a.patient_name}</strong>
+                      )}
+                    </td>
+                    <td>{a.appointment_date}</td><td>{a.appointment_time}</td><td style={{ color: 'var(--text-muted)' }}>{a.reason || '—'}</td>
+                  </tr>
                 ))}</tbody>
               </table>
             )}
@@ -61,7 +72,16 @@ export default function Dashboard() {
             {!pending_followups.length ? <div className="empty-state" style={{ padding: 24 }}><p>No follow-ups due soon</p></div> : (
               <table><thead><tr><th>Patient</th><th>Due Date</th><th>Type</th></tr></thead>
                 <tbody>{pending_followups.map(f => (
-                  <tr key={f.id}><td><strong>{f.patient_name}</strong></td>
+                  <tr key={f.id}>
+                    <td>
+                      {f.patient_id ? (
+                        <Link to={`/admin/patients/${f.patient_id}`} style={{ fontWeight: 600, color: 'inherit', textDecoration: 'none' }}>
+                          <strong>{f.patient_name}</strong>
+                        </Link>
+                      ) : (
+                        <strong>{f.patient_name}</strong>
+                      )}
+                    </td>
                     <td style={{ color: isOverdue(f.followup_date) ? 'var(--danger)' : 'inherit', fontWeight: isOverdue(f.followup_date) ? 600 : 400 }}>{f.followup_date}</td>
                     <td><span className="badge badge-warning">{f.followup_type}</span></td>
                   </tr>

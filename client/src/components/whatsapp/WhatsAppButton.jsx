@@ -72,11 +72,8 @@ export function buildPrescriptionMessage(clinicName, clinicPhone, patientName, d
 }
 
 
-/**
- * Helper: build WhatsApp appointment reminder message
- */
 export function buildAppointmentReminderMessage(clinicName, clinicPhone, patientName, date, time) {
-  return `Hi ${patientName},\n\nReminder from *${clinicName}*:\n\nYou have an appointment on *${date}* at *${time}*.\n\nPlease reply:\n✅ *YES* to confirm\n❌ *NO* to cancel or reschedule\n\nContact: ${clinicPhone || 'the clinic'}\n\n_${clinicName}_`;
+  return `Hi ${patientName},\n\nThis is a reminder for your appointment at *${clinicName}* on *${date}* at *${time}*.\n\nPlease reply with:\n✅ *1* to Confirm\n🕒 *2* to Request Reschedule\n❌ *3* to Cancel\n\nThank you!\n_${clinicName}_`;
 }
 
 

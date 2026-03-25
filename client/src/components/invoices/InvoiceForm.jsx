@@ -7,18 +7,23 @@ export default function InvoiceForm() {
   const { authFetch } = useContext(AuthContext); const navigate = useNavigate();
   const { id } = useParams(); const [searchParams] = useSearchParams(); const isEdit = Boolean(id);
   const [patients, setPatients] = useState([]);
-  const [form, setForm] = useState({ patient_id:searchParams.get('patient_id')||'', issue_date:new Date().toISOString().split('T')[0], due_date:'', notes:'', discount:0, tax_rate:18, payment_method:'', items:[emptyItem()] });
+  const [form, setForm] = useState({ patient_id:searchParams.get('patient_id')||'', issue_date:new Date().toISOString().split('T')[0], due_date:'', notes:'', discount:0, discount_type:'flat', tax_rate:18, payment_method:'', items:[emptyItem()] });
   const [saving, setSaving] = useState(false); const [error, setError] = useState('');
+  
   const subtotal = form.items.reduce((s,i)=>s+(parseFloat(i.quantity)*parseFloat(i.unit_price)||0),0);
-  const discounted = Math.max(0, subtotal-(parseFloat(form.discount)||0));
-  const taxAmount = parseFloat(((discounted*parseFloat(form.tax_rate))/100).toFixed(2));
-  const total = parseFloat((discounted+taxAmount).toFixed(2));
+  const discountVal = parseFloat(form.discount) || 0;
+  const discountAmt = form.discount_type === 'percent' ? (subtotal * discountVal) / 100 : discountVal;
+  const discounted = Math.max(0, subtotal - discountAmt);
+  const taxAmount = parseFloat(((discounted * parseFloat(form.tax_rate || 0)) / 100).toFixed(2));
+  const total = parseFloat((discounted + taxAmount).toFixed(2));
   const fmt = n => new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR'}).format(n||0);
   useEffect(() => {
     authFetch('/api/patients?limit=500').then(r=>r.json()).then(d=>setPatients(d.patients||[]));
-    if (isEdit) authFetch(`/api/invoices/${id}`).then(r=>r.json()).then(data => setForm({ patient_id:data.patient_id, issue_date:data.issue_date, due_date:data.due_date||'', notes:data.notes||'', discount:data.discount, tax_rate:data.tax_rate, payment_method:data.payment_method||'', items:data.items?.map(i=>({ description:i.description, category:i.category, quantity:i.quantity, unit_price:i.unit_price }))||[emptyItem()] }));
+    if (isEdit) authFetch(`/api/invoices/${id}`).then(r=>r.json()).then(data => setForm({ patient_id:data.patient_id, issue_date:data.issue_date, due_date:data.due_date||'', notes:data.notes||'', discount:data.discount, discount_type:data.discount_type||'flat', tax_rate:data.tax_rate, payment_method:data.payment_method||'', items:data.items?.map(i=>({ description:i.description, category:i.category, quantity:i.quantity, unit_price:i.unit_price }))||[emptyItem()] }));
   }, []);
   const updateItem = (idx,field,value) => setForm(f=>{ const items=[...f.items]; items[idx]={...items[idx],[field]:value}; return {...f,items}; });
+  
+  const cleanNum = (v) => v.replace(/[^0-9.]/g, '').replace(/^0+(?=\d)/, '');
   const handleSubmit = async () => {
     if (!form.patient_id) return setError('Please select a patient');
     if (form.items.some(i=>!i.description)) return setError('All items need a description');
@@ -26,9 +31,9 @@ export default function InvoiceForm() {
     const res = await authFetch(isEdit?`/api/invoices/${id}`:'/api/invoices', { method:isEdit?'PUT':'POST', body:JSON.stringify({ ...form, items:form.items.map(i=>({...i,quantity:parseFloat(i.quantity),unit_price:parseFloat(i.unit_price)})) }) });
     const data = await res.json();
     if (!res.ok) { setError(data.error||'Save failed'); setSaving(false); return; }
-    navigate(isEdit?`/admin/invoices/${id}`:`/admin/invoices/${data.id||''}`);
+    navigate(-1); // Stay within patient section
   };
-  const inpStyle = { border:'none', background:'transparent', borderBottom:'1px solid var(--border)', borderRadius:0 };
+  const inpStyle = { border:'none', background:'transparent', borderBottom:'1px solid var(--border)', borderRadius:0, outline:'none' };
   return (
     <div className="page">
       <div className="page-header">
@@ -66,9 +71,9 @@ export default function InvoiceForm() {
                     <tr key={idx}>
                       <td><input value={item.description} onChange={e=>updateItem(idx,'description',e.target.value)} placeholder="e.g. Consultation fee" style={inpStyle} /></td>
                       <td><select value={item.category} onChange={e=>updateItem(idx,'category',e.target.value)} style={inpStyle}>{CATS.map(c=><option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}</select></td>
-                      <td><input type="number" min="0.01" step="0.01" value={item.quantity} onChange={e=>updateItem(idx,'quantity',e.target.value)} style={inpStyle} /></td>
-                      <td><input type="number" min="0" step="0.01" value={item.unit_price} onChange={e=>updateItem(idx,'unit_price',e.target.value)} style={inpStyle} /></td>
-                      <td style={{ fontWeight:600 }}>{fmt(item.quantity*item.unit_price)}</td>
+                      <td><input type="text" value={item.quantity} onChange={e=>updateItem(idx,'quantity',cleanNum(e.target.value))} style={{ ...inpStyle, width: '100%' }} /></td>
+                      <td><input type="text" value={item.unit_price} onChange={e=>updateItem(idx,'unit_price',cleanNum(e.target.value))} style={{ ...inpStyle, width: '100%' }} /></td>
+                      <td style={{ fontWeight:600 }}>{fmt((parseFloat(item.quantity)||0)*(parseFloat(item.unit_price)||0))}</td>
                       <td>{form.items.length>1 && <button className="btn-icon" style={{ color:'var(--danger)' }} onClick={()=>setForm(f=>({...f,items:f.items.filter((_,i)=>i!==idx)}))}>✕</button>}</td>
                     </tr>
                   ))}
@@ -81,9 +86,26 @@ export default function InvoiceForm() {
           <div className="card-header"><h2>Summary</h2></div>
           <div className="card-body">
             <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10, fontSize:14 }}><span style={{ color:'var(--text-secondary)' }}>Subtotal</span><span>{fmt(subtotal)}</span></div>
-            <div className="form-group"><label>Discount (₹)</label><input type="number" min="0" value={form.discount} onChange={e=>setForm(f=>({...f,discount:parseFloat(e.target.value)||0}))} /></div>
-            <div className="form-group"><label>GST Rate (%)</label><input type="number" min="0" max="100" value={form.tax_rate} onChange={e=>setForm(f=>({...f,tax_rate:parseFloat(e.target.value)||0}))} /></div>
-            <div style={{ display:'flex', justifyContent:'space-between', fontSize:14, marginBottom:10 }}><span style={{ color:'var(--text-secondary)' }}>Tax ({form.tax_rate}%)</span><span>{fmt(taxAmount)}</span></div>
+            <div className="form-group">
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom: 6 }}>
+                <label style={{ margin: 0 }}>Discount</label>
+                <div style={{ display:'flex', gap: 4, background:'var(--bg-main)', padding: 2, borderRadius: 4 }}>
+                  <button className={`btn-icon ${form.discount_type==='flat'?'active':''}`} style={{ background:form.discount_type==='flat'?'var(--primary)':'transparent', color:form.discount_type==='flat'?'white':'inherit', padding:'2px 8px', borderRadius:4, fontSize:12 }} onClick={()=>setForm(f=>({...f,discount_type:'flat'}))}>₹</button>
+                  <button className={`btn-icon ${form.discount_type==='percent'?'active':''}`} style={{ background:form.discount_type==='percent'?'var(--primary)':'transparent', color:form.discount_type==='percent'?'white':'inherit', padding:'2px 8px', borderRadius:4, fontSize:12 }} onClick={()=>setForm(f=>({...f,discount_type:'percent'}))}>%</button>
+                </div>
+              </div>
+              <input type="text" value={form.discount} onChange={e=>setForm(f=>({...f,discount:cleanNum(e.target.value)}))} />
+            </div>
+            <div className="form-group">
+              <label>GST Rate (%)</label>
+              <input type="text" value={form.tax_rate} onChange={e=>{
+                let v = cleanNum(e.target.value);
+                if (parseFloat(v) > 100) v = '100';
+                setForm(f=>({...f, tax_rate: v}));
+              }} />
+            </div>
+            {discountAmt > 0 && <div style={{ display:'flex', justifyContent:'space-between', fontSize:14, marginBottom:10 }}><span style={{ color:'var(--text-secondary)' }}>Discount</span><span style={{ color:'var(--danger)' }}>-{fmt(discountAmt)}</span></div>}
+            <div style={{ display:'flex', justifyContent:'space-between', fontSize:14, marginBottom:10 }}><span style={{ color:'var(--text-secondary)' }}>Tax ({form.tax_rate || 0}%)</span><span>{fmt(taxAmount)}</span></div>
             <div style={{ display:'flex', justifyContent:'space-between', fontSize:18, fontWeight:700, paddingTop:12, borderTop:'2px solid var(--border)', marginBottom:16 }}><span>Total</span><span style={{ color:'var(--primary)' }}>{fmt(total)}</span></div>
             <div className="form-group"><label>Payment Method</label>
               <select value={form.payment_method} onChange={e=>setForm(f=>({...f,payment_method:e.target.value}))}>

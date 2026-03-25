@@ -10,6 +10,7 @@ export default function TreatmentPlanPanel({ patientId }) {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [editPlanId, setEditPlanId] = useState(null);
   const [form, setForm] = useState({ title: '', notes: '', start_date: new Date().toISOString().split('T')[0], items: [] });
   const [newItem, setNewItem] = useState({ procedure: '', toothNumber: '', estimatedCost: '' });
 
@@ -25,10 +26,24 @@ export default function TreatmentPlanPanel({ patientId }) {
     setNewItem({ procedure: '', toothNumber: '', estimatedCost: '' });
   };
 
+  const openNew = () => {
+    setEditPlanId(null);
+    setForm({ title: '', notes: '', start_date: new Date().toISOString().split('T')[0], items: [] });
+    setShowForm(true);
+  };
+
+  const openEdit = (p) => {
+    setEditPlanId(p.id);
+    setForm({ title: p.title || '', notes: p.notes || '', start_date: p.startDate || '', items: [...(p.items || [])] });
+    setShowForm(true);
+  };
+
   const handleSave = async () => {
     if (!form.title.trim()) return alert('Title required');
     setSaving(true);
-    await authFetch('/api/treatmentplans', { method: 'POST', body: JSON.stringify({ patient_id: patientId, ...form }) });
+    const method = editPlanId ? 'PUT' : 'POST';
+    const url = editPlanId ? `/api/treatmentplans/${editPlanId}` : '/api/treatmentplans';
+    await authFetch(url, { method, body: JSON.stringify({ patient_id: patientId, ...form }) });
     setSaving(false);
     setShowForm(false);
     setForm({ title: '', notes: '', start_date: new Date().toISOString().split('T')[0], items: [] });
@@ -49,18 +64,23 @@ export default function TreatmentPlanPanel({ patientId }) {
 
   if (loading) return <div className="loading"><div className="spinner"></div></div>;
 
+  const totalAllPlans = plans.filter(p => p.status !== 'cancelled').reduce((sum, p) => sum + (p.totalEstimate || 0), 0);
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h3 style={{ margin: 0 }}>Treatment Plans</h3>
-        <button className="btn btn-primary btn-sm" onClick={() => setShowForm(s => !s)}>
+        <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
+          Treatment Plans
+          {plans.length > 0 && <span className="badge badge-info" style={{ fontSize: 13 }}>Total Cost: {fmt(totalAllPlans)}</span>}
+        </h3>
+        <button className="btn btn-primary btn-sm" onClick={() => showForm ? setShowForm(false) : openNew()}>
           {showForm ? '✕ Cancel' : '+ New Plan'}
         </button>
       </div>
 
       {showForm && (
         <div className="card" style={{ marginBottom: 20 }}>
-          <div className="card-header"><h2>New Treatment Plan</h2></div>
+          <div className="card-header"><h2>{editPlanId ? 'Edit Treatment Plan' : 'New Treatment Plan'}</h2></div>
           <div className="card-body">
             <div className="form-row">
               <div className="form-group"><label>Plan Title *</label><input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Full Mouth Rehabilitation" /></div>
@@ -93,7 +113,7 @@ export default function TreatmentPlanPanel({ patientId }) {
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
               <button className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Create Plan'}</button>
+              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : editPlanId ? 'Update Plan' : 'Create Plan'}</button>
             </div>
           </div>
         </div>
@@ -118,6 +138,7 @@ export default function TreatmentPlanPanel({ patientId }) {
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)' }}>{fmt(plan.totalEstimate)}</span>
+                <button className="btn-icon" onClick={() => openEdit(plan)}>✏️</button>
                 {plan.status === 'active' && (
                   <button className="btn btn-sm btn-success" onClick={() => updatePlanStatus(plan.id, 'completed')}>Mark Complete</button>
                 )}

@@ -20,6 +20,7 @@ router.get('/', async (req, res) => {
     ]);
     const followups = docs.map(f => ({
       ...f.toJSON(),
+      patient_id:    f.patientId?._id?.toString() || null,
       patient_name:  f.patientId?.name,
       patient_phone: f.patientId?.phone,
       followup_date: f.followupDate,

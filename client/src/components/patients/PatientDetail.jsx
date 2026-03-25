@@ -62,7 +62,7 @@ export default function PatientDetail() {
   });
 
   return (
-    <div className="page">
+    <div className="page" style={{ overflowX: 'hidden' }}>
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button className="btn btn-secondary btn-sm" onClick={() => navigate(-1)}>← Back</button>
@@ -93,14 +93,18 @@ export default function PatientDetail() {
 
       {/* Overview */}
       {tab === 'overview' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div className="card">
               <div className="card-header"><h2>Personal Info</h2></div>
               <div className="card-body">
                 {[['📱 Phone', patient.phone], ['✉️ Email', patient.email], ['🎂 DOB', patient.dateOfBirth], ['⚧️ Gender', patient.gender], ['🩸 Blood', patient.bloodGroup], ['📍 Address', patient.address]].map(([l, v]) => v ? (
-                  <div key={l} style={{ display: 'flex', gap: 10, marginBottom: 10, fontSize: 14 }}>
-                    <span style={{ color: 'var(--text-muted)', minWidth: 90 }}>{l}</span><span>{v}</span>
+                  <div key={l} style={{ display: 'flex', gap: 10, marginBottom: 10, fontSize: 14, minWidth: 0 }}>
+                    <span style={{ color: 'var(--text-muted)', minWidth: 90, flexShrink: 0 }}>{l}</span>
+                    <span 
+                      style={l === '✉️ Email' ? { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } : { wordBreak: 'break-word' }} 
+                      title={String(v)}
+                    >{v}</span>
                   </div>
                 ) : null)}
               </div>

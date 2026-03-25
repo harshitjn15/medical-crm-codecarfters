@@ -7,9 +7,10 @@ const { requireRole } = require('../middleware/requireRole');
 
 router.use(verifyToken, resolveTenant);
 
-function calcTotals(items, taxRate, discount) {
+function calcTotals(items, taxRate, discount, discountType) {
   const subtotal = items.reduce((s, i) => s + i.amount, 0);
-  const taxable  = Math.max(0, subtotal - (discount || 0));
+  const discountAmt = discountType === 'percent' ? (subtotal * discount) / 100 : (discount || 0);
+  const taxable  = Math.max(0, subtotal - discountAmt);
   const taxAmount = parseFloat(((taxable * taxRate) / 100).toFixed(2));
   const total     = parseFloat((taxable + taxAmount).toFixed(2));
   return { subtotal, taxAmount, total };
@@ -49,6 +50,7 @@ function toClient(inv) {
     invoice_number:  j.invoiceNumber,
     issue_date:      j.issueDate,
     due_date:        j.dueDate,
+    discount_type:   j.discountType || 'flat',
     tax_rate:        j.taxRate,
     tax_amount:      j.taxAmount,
     payment_method:  j.paymentMethod,
@@ -121,18 +123,30 @@ router.post('/', async (req, res) => {
   try {
     const {
       patient_id, appointment_id, issue_date, due_date, notes,
-      discount = 0, tax_rate = 18, payment_method, items = [],
+      discount = 0, discount_type = 'flat', tax_rate = 18, payment_method, items = [],
     } = req.body;
 
     if (!patient_id)   return res.status(400).json({ error: 'Patient required' });
-    if (!items.length) return res.status(400).json({ error: 'At least one item required' });
-    if (items.some(i => !i.description || !i.description.trim())) {
-      return res.status(400).json({ error: 'All items must have a description' });
+    if (!items || !items.length) return res.status(400).json({ error: 'At least one item required' });
+    
+    const discountNum = parseFloat(discount) || 0;
+    if (discountNum < 0) return res.status(400).json({ error: 'Invalid discount' });
+    if (discount_type === 'percent' && discountNum > 100) return res.status(400).json({ error: 'Discount percent cannot exceed 100' });
+
+    const taxRateNum  = parseFloat(tax_rate) || 0;
+    if (taxRateNum < 0) return res.status(400).json({ error: 'Invalid GST rate' });
+
+    for (const i of items) {
+      if (!i.description || !i.description.trim()) return res.status(400).json({ error: 'All items must have a description' });
+      const qty = parseFloat(i.quantity);
+      if (isNaN(qty) || qty <= 0) return res.status(400).json({ error: 'Invalid item quantity' });
+      const price = parseFloat(i.unit_price);
+      if (isNaN(price) || price < 0) return res.status(400).json({ error: 'Invalid item unit price' });
     }
 
     const mappedItems = items.map(i => {
-      const qty   = parseFloat(i.quantity)   || 1;
-      const price = parseFloat(i.unit_price) || 0;
+      const qty   = parseFloat(i.quantity);
+      const price = parseFloat(i.unit_price);
       return {
         description: i.description.trim(),
         category:    i.category || 'service',
@@ -142,9 +156,7 @@ router.post('/', async (req, res) => {
       };
     });
 
-    const discountNum = parseFloat(discount) || 0;
-    const taxRateNum  = parseFloat(tax_rate) || 18;
-    const { subtotal, taxAmount, total } = calcTotals(mappedItems, taxRateNum, discountNum);
+    const { subtotal, taxAmount, total } = calcTotals(mappedItems, taxRateNum, discountNum, discount_type);
     const invoiceNumber = await genInvoiceNumber(req.clinicId);
 
     const inv = await Invoice.create({
@@ -156,6 +168,7 @@ router.post('/', async (req, res) => {
       dueDate:       due_date   || undefined,
       notes:         notes      || '',
       discount:      discountNum,
+      discountType:  discount_type,
       taxRate:       taxRateNum,
       paymentMethod: payment_method || undefined,
       items:         mappedItems,
@@ -167,7 +180,8 @@ router.post('/', async (req, res) => {
       invoice_number: invoiceNumber, subtotal, taxAmount, total,
     });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to create invoice' });
+    console.error('Invoice Save Error:', err);
+    res.status(500).json({ error: 'Failed to save invoice' });
   }
 });
 
@@ -190,19 +204,28 @@ router.put('/:id', async (req, res) => {
     if (!inv) return res.status(404).json({ error: 'Not found' });
     if (inv.status === 'paid') return res.status(400).json({ error: 'Cannot edit paid invoice' });
 
-    const { issue_date, due_date, notes, discount, tax_rate, items } = req.body;
+    const { issue_date, due_date, notes, discount, discount_type, tax_rate, items } = req.body;
     if (issue_date)          inv.issueDate = issue_date;
     if (due_date !== undefined) inv.dueDate = due_date;
     if (notes !== undefined)    inv.notes   = notes;
     if (discount !== undefined) inv.discount = discount;
+    if (discount_type !== undefined) inv.discountType = discount_type;
     if (tax_rate !== undefined) inv.taxRate  = tax_rate;
 
     if (items && items.length) {
+      for (const i of items) {
+        if (!i.description || !i.description.trim()) return res.status(400).json({ error: 'All items must have a description' });
+        const qty = parseFloat(i.quantity);
+        if (isNaN(qty) || qty <= 0) return res.status(400).json({ error: 'Invalid item quantity' });
+        const price = parseFloat(i.unit_price);
+        if (isNaN(price) || price < 0) return res.status(400).json({ error: 'Invalid item unit price' });
+      }
+
       inv.items = items.map(i => {
-        const qty   = parseFloat(i.quantity)   || 1;
-        const price = parseFloat(i.unit_price) || 0;
+        const qty   = parseFloat(i.quantity);
+        const price = parseFloat(i.unit_price);
         return {
-          description: (i.description || '').trim(),
+          description: i.description.trim(),
           category:    i.category || 'service',
           quantity:    qty,
           unitPrice:   price,
@@ -211,7 +234,7 @@ router.put('/:id', async (req, res) => {
       });
     }
 
-    const { subtotal, taxAmount, total } = calcTotals(inv.items, inv.taxRate, inv.discount);
+    const { subtotal, taxAmount, total } = calcTotals(inv.items, inv.taxRate, inv.discount, inv.discountType);
     inv.subtotal = subtotal; inv.taxAmount = taxAmount; inv.total = total;
     await inv.save();
     res.json({ message: 'Updated', id: inv.id });

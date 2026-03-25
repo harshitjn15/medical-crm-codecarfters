@@ -48,6 +48,7 @@ router.get('/dashboard', async (req, res) => {
       upcoming_appointments: upcoming_docs.map(a => ({
         ...a.toJSON(),
         patient_name:     a.patientName,
+        patient_id:       a.patientId?.toString() || null,
         patient_phone:    a.patientPhone,
         appointment_date: a.appointmentDate,
         appointment_time: a.appointmentTime,
@@ -55,6 +56,7 @@ router.get('/dashboard', async (req, res) => {
       pending_followups: followup_docs.map(f => ({
         ...f.toJSON(),
         patient_name:  f.patientId?.name,
+        patient_id:    f.patientId?._id?.toString() || null,
         followup_date: f.followupDate,
         followup_type: f.followupType,
       })),

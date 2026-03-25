@@ -223,15 +223,16 @@ export default function ToothChart({ patientId, readOnly = false }) {
       )}
 
       {/* Summary of conditions */}
-      {teeth.some(t => t.status !== 'healthy') && (
+      {teeth.some(t => t.status !== 'healthy' || (t.surfaces && t.surfaces.length > 0)) && (
         <div className="tc-summary">
           <div className="tc-summary-title">Conditions Summary</div>
           <div className="tc-summary-grid">
-            {teeth.filter(t => t.status !== 'healthy').map(t => (
+            {teeth.filter(t => t.status !== 'healthy' || (t.surfaces && t.surfaces.length > 0)).map(t => (
               <div key={t.toothNumber} className="tc-summary-item">
-                <span className="tc-summary-num">#{t.toothNumber}</span>
+                <span className="tc-summary-num">Tooth {t.toothNumber}</span>
                 <span className="tc-summary-status" style={{ color: TOOTH_STATUS[t.status]?.border }}>
                   {TOOTH_STATUS[t.status]?.label}
+                  {t.surfaces && t.surfaces.length > 0 ? ` — ${t.surfaces.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ')} surface${t.surfaces.length > 1 ? 's' : ''}` : ''}
                 </span>
                 {t.notes && <span className="tc-summary-note">{t.notes}</span>}
               </div>

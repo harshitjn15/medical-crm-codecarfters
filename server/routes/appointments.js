@@ -93,13 +93,18 @@ router.post('/', async (req, res) => {
 });
 
 
-// Supports: ?status=, ?filter=today, ?from=YYYY-MM-DD&to=YYYY-MM-DD, ?page=, ?limit=
+// Supports: ?status=, ?filter=today, ?from=YYYY-MM-DD&to=YYYY-MM-DD, ?page=, ?limit=, ?client_today=
 router.get('/', async (req, res) => {
   try {
-    const { status, filter, from, to, page = 1, limit = 200 } = req.query;
+    const { status, filter, from, to, date, client_today, page = 1, limit = 20 } = req.query;
     const q = { clinicId: req.clinicId };
     if (status) q.status = status;
-    if (filter === 'today') q.appointmentDate = new Date().toISOString().split('T')[0];
+    if (filter === 'today') {
+      q.appointmentDate = client_today || new Date().toISOString().split('T')[0];
+    }
+    if (date) {
+      q.appointmentDate = date;
+    }
     // Date range filter for calendar view
     if (from || to) {
       q.appointmentDate = {};
@@ -121,7 +126,22 @@ router.get('/', async (req, res) => {
       appointment_time: a.appointmentTime,
       patient_id:       a.patientId?.toString() || null,
     }));
-    res.json({ appointments, total });
+
+    const todayStr = client_today || new Date().toISOString().split('T')[0];
+    const agg = await Appointment.aggregate([
+      { $match: { clinicId: req.clinicId } },
+      { $group: {
+          _id: null,
+          all: { $sum: 1 },
+          today: { $sum: { $cond: [{ $eq: ['$appointmentDate', todayStr] }, 1, 0] } },
+          scheduled: { $sum: { $cond: [{ $eq: ['$status', 'scheduled'] }, 1, 0] } },
+          completed: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
+          cancelled: { $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] } },
+      }}
+    ]).catch(() => []);
+    const stats = agg[0] || { all: 0, today: 0, scheduled: 0, completed: 0, cancelled: 0 };
+
+    res.json({ appointments, total, stats });
   } catch (err) { res.status(500).json({ error: 'Failed to fetch appointments' }); }
 });
 

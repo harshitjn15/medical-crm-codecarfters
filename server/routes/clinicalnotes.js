@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
       ClinicalNote.find(q).sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)).populate('patientId', 'name'),
       ClinicalNote.countDocuments(q),
     ]);
-    res.json({ notes: docs.map(d => ({ ...d.toJSON(), patient_name: d.patientId?.name })), total });
+    res.json({ notes: docs.map(d => ({ ...d.toJSON(), id: d._id, patient_name: d.patientId?.name })), total });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
